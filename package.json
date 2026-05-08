@@ -1,0 +1,35 @@
+{
+  "name": "agent-switch",
+  "version": "0.1.0",
+  "description": "CLI/TUI control plane for switching AI coding agent providers and models.",
+  "type": "module",
+  "bin": {
+    "agent-switch": "./dist/agent-switch.js",
+    "as": "./dist/as.js"
+  },
+  "scripts": {
+    "dev": "bun run src/cli/main.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "bun build ./src/cli/main.ts --target=bun --outfile=dist/agent-switch.js && cp dist/agent-switch.js dist/as.js",
+    "clean": "rm -rf dist",
+    "chmod": "chmod +x dist/agent-switch.js dist/as.js",
+    "prepack": "bun run build && bun run chmod",
+    "check": "bun test && bun run typecheck && bun run build"
+  },
+  "files": [
+    "docs"
+  ],
+  "dependencies": {
+    "cac": "^6.7.14",
+    "jsonc-parser": "^3.3.1",
+    "picocolors": "^1.1.1",
+    "smol-toml": "^1.4.2",
+    "yaml": "^2.8.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.3",
+    "typescript": "^6.0.3"
+  }
+}
