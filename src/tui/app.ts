@@ -406,17 +406,21 @@ async function submitForm(app: AgentSwitchApp, state: TuiState, data: TuiData): 
     const values = formValues(state.form);
     const models = values.models!.split(",").map((item) => item.trim()).filter(Boolean);
     if (models.length === 0) return withMessage(state, data, "warning", "请填写 models");
+    const firstModel = models[0];
+    if (!firstModel) return withMessage(state, data, "warning", "请填写 models");
+    const existingProvider = data.status.providers.find((item) => item.id === values.id);
+    const defaultModel = existingProvider?.defaultModel && models.includes(existingProvider.defaultModel) ? existingProvider.defaultModel : firstModel;
     const provider = {
       id: values.id!,
       name: values.name!,
       type: values.type! as ProviderProfile["type"],
       models: models.map((id) => ({ id })),
-      defaultModel: models[0],
+      defaultModel,
       ...(values.baseUrl ? { baseUrl: values.baseUrl } : {}),
       ...(values.apiKeyEnv ? { apiKeyEnv: values.apiKeyEnv } : {}),
     };
     const result = await executeTuiCommand(app, { type: "add-custom-provider", provider });
-    return { state: { ...state, view: "models", previousView: undefined, form: undefined, activeTargetRef: `${provider.id}/${models[0]}`, message: result.message }, data: result.data };
+    return { state: { ...state, view: "models", previousView: undefined, form: undefined, activeTargetRef: `${provider.id}/${defaultModel}`, message: result.message }, data: result.data };
   }
 
   const values = formValues(state.form);

@@ -12,17 +12,22 @@ const menuLabels: Record<MainMenuItem, string> = {
 };
 
 export function renderTuiFrame(snapshot: RenderSnapshot, size: { rows: number; cols: number }): string {
-  const lines = [
+  const header = [
     "agent-switch",
     `config ${snapshot.data.status.configPath}`,
     "",
-    ...renderBody(snapshot),
+  ];
+  const footer = [
     "",
     renderFooter(snapshot),
     renderStatus(snapshot),
     formatMessage(snapshot.state.message.text),
   ];
-  return fitFrame(lines, size.rows, size.cols);
+  const maxRows = Math.max(1, size.rows);
+  const footerRows = footer.slice(-maxRows);
+  const headerRows = header.slice(0, Math.max(0, maxRows - footerRows.length));
+  const bodyMaxRows = Math.max(0, maxRows - headerRows.length - footerRows.length);
+  return fitFrame([...headerRows, ...renderBody(snapshot).slice(0, bodyMaxRows), ...footerRows], size.rows, size.cols);
 }
 
 function renderBody(snapshot: RenderSnapshot): string[] {

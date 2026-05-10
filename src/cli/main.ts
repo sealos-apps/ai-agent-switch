@@ -114,7 +114,8 @@ cli.command("client <action> [client]", "客户端命令：list / detect / show 
     }
     if (action === "use-proxy") {
       if (!client) throw new Error("Missing client");
-      const result = await app.useClientProxy({ clientId: parseClientId(client), yes: Boolean(options.yes) && !options.dryRun });
+      const clientId = parseClientId(client);
+      const result = await app.useClientProxy({ clientId, yes: Boolean(options.yes) && !options.dryRun });
       if (options.json) {
         console.log(JSON.stringify(result, null, 2));
         return;
@@ -129,7 +130,7 @@ cli.command("client <action> [client]", "客户端命令：list / detect / show 
           console.log(pc.yellow("已取消，未写入客户端配置"));
           return;
         }
-        await app.applyPlan(result.plan);
+        await app.useClientProxy({ clientId, yes: true });
         console.log(pc.green("OK 已应用"));
         return;
       }

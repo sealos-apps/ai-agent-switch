@@ -31,9 +31,11 @@ export function reduceTuiState(state: TuiState, action: TuiStateAction, data: Tu
     if (state.view === "custom-provider" || state.view === "add-model" || state.view === "confirm") {
       return { ...state, view: state.previousView ?? "menu", previousView: undefined, form: undefined, confirm: undefined };
     }
-    if (state.view === "client-detail") return { ...state, view: "clients", previousView: "menu", clientDetail: undefined };
+    if (state.view === "client-detail") {
+      return { ...state, view: state.previousView ?? "clients", previousView: undefined, clientDetail: undefined };
+    }
     if (state.view === "menu") return state;
-    return { ...state, view: "menu", previousView: undefined };
+    return { ...state, view: state.previousView ?? "menu", previousView: undefined };
   }
   if (action.type === "help") {
     return { ...state, previousView: state.view, view: "help" };
@@ -100,7 +102,6 @@ function itemCountForView(view: TuiView, data: TuiData): number {
   if (view === "providers") return 2 + data.status.providers.length;
   if (view === "presets") return Math.max(1, data.presets.length);
   if (view === "models") return Math.max(1, data.models.length);
-  if (view === "custom-provider" || view === "add-model") return Math.max(1, data.status.providers.length);
   return 1;
 }
 

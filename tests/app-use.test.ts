@@ -75,6 +75,12 @@ describe("AgentSwitchApp.useClient", () => {
       expect(settings.security.auth.selectedType).toBe("agent-switch-proxy");
       expect(settings.model.name).toBe("agent-switch/default");
       expect(settings.modelProviders["agent-switch-proxy"].baseUrl).toBe("http://127.0.0.1:17890/v1");
+      expect(settings.modelProviders["agent-switch-proxy"].description).toContain("openai-chat-compatible");
+      expect((await app.status()).state.lastSwitch).toMatchObject({
+        clientId: "qwen",
+        providerId: "agent-switch-proxy",
+        modelId: "agent-switch/default",
+      });
     } finally {
       await rm(home, { recursive: true, force: true });
     }

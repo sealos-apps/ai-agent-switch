@@ -355,7 +355,7 @@ export class AgentSwitchApp {
     const provider: ProviderProfile = {
       id: "agent-switch-proxy",
       name: "agent-switch Proxy",
-      type: "openai-responses",
+      type: "openai-chat-compatible",
       baseUrl: `http://${config.proxy.host}:${config.proxy.port}/v1`,
       models: [{ id: modelId }],
       defaultModel: modelId,

@@ -23,21 +23,21 @@
 本次 VM 示例：
 
 ```bash
-ssh -i /Users/night/Downloads/hzh.sealos.run_ns-eraywg70_test-agent-switch devbox@hzh.sealos.run -p 2233
+ssh -i /path/to/key user@host -p PORT
 ```
 
 首次连接前先限制私钥权限：
 
 ```bash
-chmod 600 /Users/night/Downloads/hzh.sealos.run_ns-eraywg70_test-agent-switch
+chmod 600 /path/to/key
 ```
 
 为了复用命令，可以在本机设置：
 
 ```bash
-SSH_KEY=/Users/night/Downloads/hzh.sealos.run_ns-eraywg70_test-agent-switch
-SSH_HOST=devbox@hzh.sealos.run
-SSH_PORT=2233
+SSH_KEY=/path/to/key
+SSH_HOST=user@host
+SSH_PORT=PORT
 ```
 
 ## 同步当前工作区

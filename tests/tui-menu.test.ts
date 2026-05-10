@@ -33,6 +33,16 @@ describe("TUI menu state", () => {
     expect(state.activeTargetRef).toBe("openrouter/qwen/qwen3-coder");
     expect(selectedModelTarget(state, dataWithProviders())?.ref).toBe("openrouter/qwen/qwen3-coder");
   });
+
+  test("returns from preset selection to providers", () => {
+    let state = createTuiState();
+    state = reduceTuiState(state, { type: "open-view", view: "providers" }, dataWithProviders());
+    state = reduceTuiState(state, { type: "open-view", view: "presets" }, dataWithProviders());
+    state = reduceTuiState(state, { type: "back" }, dataWithProviders());
+
+    expect(state.view).toBe("providers");
+    expect(state.previousView).toBeUndefined();
+  });
 });
 
 describe("TUI menu rendering", () => {
@@ -89,6 +99,17 @@ describe("TUI menu rendering", () => {
     expect(frame).toContain("a 添加模型");
     expect(frame).toContain("x 删除");
     expect(frame).toContain("* 默认");
+  });
+
+  test("keeps footer status and message visible when provider list is long", () => {
+    const data = dataWithManyProviders();
+    const state = reduceTuiState(createTuiState(), { type: "open-view", view: "providers" }, data);
+    const frame = renderTuiFrame({ state, data }, { rows: 5, cols: 100 });
+
+    expect(frame).toContain("agent-switch");
+    expect(frame).toContain("Esc 返回");
+    expect(frame).toContain("status:");
+    expect(frame).toContain("message:");
   });
 
   test("renders provider type as selectable choices in the custom provider form", () => {
@@ -311,6 +332,23 @@ function dataWithClientCurrent() {
       },
     },
     clientCurrent: { clientId: "codex" as const, providerId: "su8", modelId: "gpt-5.5", configPath: "/tmp/.codex/config.toml" },
+  };
+}
+
+function dataWithManyProviders() {
+  const providers: ProviderProfile[] = Array.from({ length: 20 }, (_, index) => ({
+    id: `provider-${index}`,
+    name: `Provider ${index}`,
+    type: "openai-chat-compatible",
+    baseUrl: "https://example.com/v1",
+    models: [{ id: "model" }],
+  }));
+  return {
+    ...dataWithProviders(),
+    status: {
+      ...statusWithProviders(),
+      providers,
+    },
   };
 }
 
