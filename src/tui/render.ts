@@ -1,4 +1,5 @@
-import type { MainMenuItem, TuiData, TuiState, TuiView } from "./types";
+import pc from "picocolors";
+import type { MainMenuItem, TuiData, TuiMessage, TuiState, TuiView } from "./types";
 
 type RenderSnapshot = {
   state: TuiState;
@@ -21,7 +22,7 @@ export function renderTuiFrame(snapshot: RenderSnapshot, size: { rows: number; c
     "",
     renderFooter(snapshot),
     renderStatus(snapshot),
-    formatMessage(snapshot.state.message.text),
+    formatMessage(snapshot.state.message),
   ];
   const maxRows = Math.max(1, size.rows);
   const footerRows = footer.slice(-maxRows);
@@ -219,7 +220,8 @@ function renderFooter(snapshot: RenderSnapshot): string {
   if (snapshot.state.view === "providers") return "↑/↓ 移动 · Enter 选择 · a 添加 · e 编辑 · x 删除 · t 测试 · Esc 返回 · h 帮助";
   if (snapshot.state.view === "presets") return "↑/↓ 移动 · Enter 添加 preset · Esc 返回 · h 帮助";
   if (snapshot.state.view === "models") return "↑/↓ 移动 · Enter 当前 · a 添加模型 · x 删除 · * 默认 · r route · f fallback · Esc 返回 · h 帮助";
-  if (snapshot.state.view === "custom-provider" || snapshot.state.view === "add-model") return "↑/↓ 字段 · ←/→/Space 切换选项 · Enter 保存 · Esc 返回";
+  if (snapshot.state.view === "custom-provider" || snapshot.state.view === "add-model") return "↑/↓ 字段 · ←/→/Space 切换选项 · Enter 保存 · Esc 返回 · Ctrl-C 退出";
+  if (snapshot.state.view === "confirm") return "Enter 确认 · Esc 取消 · q/Ctrl-C 退出";
   return "↑/↓ 移动 · Enter 保存/确认 · Esc 返回";
 }
 
@@ -234,8 +236,16 @@ function pointer(active: boolean): string {
   return active ? "▶" : " ";
 }
 
-function formatMessage(text: string): string {
-  return `message: ${text}`;
+function formatMessage(message: TuiMessage): string {
+  const tone = messageToneLabel(message.tone);
+  return `message: ${tone} ${message.text}`;
+}
+
+function messageToneLabel(tone: TuiMessage["tone"]): string {
+  if (tone === "success") return pc.green("[success]");
+  if (tone === "warning") return pc.yellow("[warning]");
+  if (tone === "error") return pc.red("[error]");
+  return pc.blue("[info]");
 }
 
 function fitFrame(lines: string[], rows: number, cols: number): string {

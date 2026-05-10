@@ -60,6 +60,7 @@ export type TuiForm = {
   kind: "custom-provider" | "add-model";
   activeField: number;
   fields: TuiFormField[];
+  existingProvider?: ProviderProfile | undefined;
 };
 
 export type TuiFormField = {

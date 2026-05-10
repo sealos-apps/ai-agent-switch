@@ -44,12 +44,22 @@ export async function runTui(app: AgentSwitchApp): Promise<void> {
     const onData = (key: string) => {
       void (async () => {
         if (state.view === "custom-provider" || state.view === "add-model") {
+          if (key === "\u0003") {
+            cleanup(onData);
+            resolve();
+            return;
+          }
           ({ state, data } = await handleFormKey(app, state, data, key));
           paint();
           return;
         }
 
         if (state.view === "confirm") {
+          if (key === "q" || key === "\u0003") {
+            cleanup(onData);
+            resolve();
+            return;
+          }
           ({ state, data } = await handleConfirmKey(app, state, data, key));
           paint();
           return;
@@ -82,7 +92,7 @@ export async function runTui(app: AgentSwitchApp): Promise<void> {
           } else if (action.type === "remove") {
             ({ state, data } = handleRemove(state, data));
           } else if (action.type === "edit") {
-            ({ state, data } = handleEdit(state, data));
+            ({ state, data } = await handleEdit(app, state, data));
           } else if (action.type === "test") {
             ({ state, data } = await handleProviderTest(app, state, data));
           } else if (action.type === "detect") {
@@ -109,9 +119,7 @@ export async function runTui(app: AgentSwitchApp): Promise<void> {
 
 function cleanup(onData: (key: string) => void): void {
   process.stdin.off("data", onData);
-  process.stdin.setRawMode(false);
-  process.stdin.pause();
-  process.stdout.write("\x1b[?25h\x1b[0m\n");
+  cleanupTerminal();
 }
 
 function renderStatic(status: AppStatus): void {
@@ -212,10 +220,12 @@ function handleRemove(state: TuiState, data: TuiData): { state: TuiState; data: 
   return withMessage(state, data, "info", "x 可在 Providers 删除 provider，或在 Models 删除模型");
 }
 
-function handleEdit(state: TuiState, data: TuiData): { state: TuiState; data: TuiData } {
+async function handleEdit(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
   if (state.view !== "providers") return withMessage(state, data, "info", "e 只在 Providers 中编辑 provider");
   const providerId = selectedProviderId(state, data);
-  const provider = data.status.providers.find((item) => item.id === providerId);
+  if (!providerId) return withMessage(state, data, "warning", "请选择要编辑的 provider");
+  const config = await app.loadConfig();
+  const provider = config.providers[providerId];
   if (!provider) return withMessage(state, data, "warning", "请选择要编辑的 provider");
   return { state: openCustomProviderForm(state, provider), data };
 }
@@ -314,6 +324,13 @@ async function handleConfirmKey(app: AgentSwitchApp, state: TuiState, data: TuiD
   return { state: { ...state, view: state.previousView ?? "menu", previousView: undefined, confirm: undefined, message: result.message }, data: result.data };
 }
 
+function cleanupTerminal(): void {
+  process.stdin.removeAllListeners("data");
+  if (typeof process.stdin.setRawMode === "function") process.stdin.setRawMode(false);
+  process.stdin.pause();
+  process.stdout.write("\x1b[?25h\x1b[0m\n");
+}
+
 function openCustomProviderForm(state: TuiState, provider?: ProviderProfile): TuiState {
   const models = provider?.models.map((model) => model.id).join(", ") ?? "";
   return {
@@ -324,6 +341,7 @@ function openCustomProviderForm(state: TuiState, provider?: ProviderProfile): Tu
     form: {
       kind: "custom-provider",
       activeField: 0,
+      existingProvider: provider,
       fields: [
         { name: "id", label: "id", value: provider?.id ?? "", required: true },
         { name: "name", label: "name", value: provider?.name ?? "", required: true },
@@ -403,24 +421,9 @@ async function submitForm(app: AgentSwitchApp, state: TuiState, data: TuiData): 
   if (missing) return withMessage(state, data, "warning", `请填写 ${missing.label}`);
 
   if (state.form.kind === "custom-provider") {
-    const values = formValues(state.form);
-    const models = values.models!.split(",").map((item) => item.trim()).filter(Boolean);
-    if (models.length === 0) return withMessage(state, data, "warning", "请填写 models");
-    const firstModel = models[0];
-    if (!firstModel) return withMessage(state, data, "warning", "请填写 models");
-    const existingProvider = data.status.providers.find((item) => item.id === values.id);
-    const defaultModel = existingProvider?.defaultModel && models.includes(existingProvider.defaultModel) ? existingProvider.defaultModel : firstModel;
-    const provider = {
-      id: values.id!,
-      name: values.name!,
-      type: values.type! as ProviderProfile["type"],
-      models: models.map((id) => ({ id })),
-      defaultModel,
-      ...(values.baseUrl ? { baseUrl: values.baseUrl } : {}),
-      ...(values.apiKeyEnv ? { apiKeyEnv: values.apiKeyEnv } : {}),
-    };
+    const provider = buildCustomProviderFromForm(state.form);
     const result = await executeTuiCommand(app, { type: "add-custom-provider", provider });
-    return { state: { ...state, view: "models", previousView: undefined, form: undefined, activeTargetRef: `${provider.id}/${defaultModel}`, message: result.message }, data: result.data };
+    return { state: { ...state, view: "models", previousView: undefined, form: undefined, activeTargetRef: `${provider.id}/${provider.defaultModel ?? provider.models[0]?.id}`, message: result.message }, data: result.data };
   }
 
   const values = formValues(state.form);
@@ -430,6 +433,29 @@ async function submitForm(app: AgentSwitchApp, state: TuiState, data: TuiData): 
 
 function formValues(form: TuiForm): Record<string, string | undefined> {
   return Object.fromEntries(form.fields.map((field) => [field.name, field.value.trim() || undefined]));
+}
+
+export function buildCustomProviderFromForm(form: TuiForm): ProviderProfile {
+  const values = formValues(form);
+  const models = values.models!.split(",").map((item) => item.trim()).filter(Boolean);
+  if (models.length === 0) throw new Error("请填写 models");
+  const defaultModel = form.existingProvider?.defaultModel && models.includes(form.existingProvider.defaultModel)
+    ? form.existingProvider.defaultModel
+    : models[0];
+  if (!defaultModel) throw new Error("请填写 models");
+
+  return {
+    id: values.id!,
+    name: values.name!,
+    type: values.type! as ProviderProfile["type"],
+    models: models.map((id) => ({ id })),
+    defaultModel,
+    ...(values.baseUrl ? { baseUrl: values.baseUrl } : {}),
+    ...(values.apiKeyEnv ? { apiKeyEnv: values.apiKeyEnv } : {}),
+    ...(form.existingProvider?.apiKey ? { apiKey: form.existingProvider.apiKey } : {}),
+    ...(form.existingProvider?.headers ? { headers: form.existingProvider.headers } : {}),
+    ...(form.existingProvider?.params ? { params: form.existingProvider.params } : {}),
+  };
 }
 
 function withMessage(

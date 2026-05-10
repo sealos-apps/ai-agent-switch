@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { providerTypeLabels, selectableProviderTypes, type ProviderProfile, type ValidationResult } from "../src/config/schema";
 import type { AppStatus, ModelTarget } from "../src/core/app";
 import { keyToTuiAction } from "../src/tui/input";
+import { buildCustomProviderFromForm } from "../src/tui/app";
 import { createTuiState, reduceTuiState, selectedMainMenuItem, selectedModelTarget } from "../src/tui/state";
 import { renderTuiFrame } from "../src/tui/render";
 import { executeTuiCommand } from "../src/tui/controller";
@@ -101,6 +102,14 @@ describe("TUI menu rendering", () => {
     expect(frame).toContain("* 默认");
   });
 
+  test("renders message tone in the frame", () => {
+    const state = { ...createTuiState(), message: { tone: "error" as const, text: "boom" } };
+    const frame = renderTuiFrame({ state, data: dataWithProviders() }, { rows: 24, cols: 100 });
+
+    expect(frame).toContain("error");
+    expect(frame).toContain("boom");
+  });
+
   test("keeps footer status and message visible when provider list is long", () => {
     const data = dataWithManyProviders();
     const state = reduceTuiState(createTuiState(), { type: "open-view", view: "providers" }, data);
@@ -146,6 +155,63 @@ describe("TUI menu rendering", () => {
       expect(frame).toContain(type);
     }
     expect(frame).toContain("Space 切换选项");
+    expect(frame).toContain("Ctrl-C 退出");
+  });
+
+  test("renders confirm footer with quit hint", () => {
+    const state = {
+      ...createTuiState(),
+      view: "confirm" as const,
+      previousView: "providers" as const,
+      confirm: {
+        message: "删除 provider openrouter？",
+        command: { type: "remove-provider", providerId: "openrouter" } as const,
+      },
+    };
+    const frame = renderTuiFrame({ state, data: dataWithProviders() }, { rows: 24, cols: 100 });
+
+    expect(frame).toContain("删除 provider openrouter？");
+    expect(frame).toContain("q/Ctrl-C 退出");
+  });
+
+  test("preserves edit-only provider fields when rebuilding a custom provider", () => {
+    const provider = buildCustomProviderFromForm({
+      kind: "custom-provider",
+      activeField: 0,
+      existingProvider: {
+        id: "local",
+        name: "Local",
+        type: "openai-chat-compatible",
+        baseUrl: "https://old.example/v1",
+        apiKey: { kind: "inline", value: "sk-secret-value" },
+        headers: { "x-test": "1" },
+        params: { region: "cn" },
+        models: [{ id: "a" }, { id: "b" }],
+        defaultModel: "b",
+      },
+      fields: [
+        { name: "id", label: "id", value: "local", required: true },
+        { name: "name", label: "name", value: "Local", required: true },
+        {
+          name: "type",
+          label: "type",
+          value: "openai-chat-compatible",
+          required: true,
+          options: selectableProviderTypes,
+          optionLabels: providerTypeLabels,
+        },
+        { name: "baseUrl", label: "baseUrl", value: "https://new.example/v1", required: false },
+        { name: "apiKeyEnv", label: "apiKeyEnv", value: "LOCAL_API_KEY", required: false },
+        { name: "models", label: "models", value: "a, b", required: true },
+      ],
+    });
+
+    expect(provider.defaultModel).toBe("b");
+    expect(provider.apiKey).toEqual({ kind: "inline", value: "sk-secret-value" });
+    expect(provider.headers).toEqual({ "x-test": "1" });
+    expect(provider.params).toEqual({ region: "cn" });
+    expect(provider.baseUrl).toBe("https://new.example/v1");
+    expect(provider.apiKeyEnv).toBe("LOCAL_API_KEY");
   });
 });
 

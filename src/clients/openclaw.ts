@@ -75,7 +75,6 @@ function openClawApi(type: ProviderType): OpenClawProviderApi {
       return "google-generative-ai";
     case "ollama":
       return "ollama";
-    case "openai":
     case "openai-responses":
       return "openai-responses";
     case "openai-compatible":
@@ -89,6 +88,8 @@ function openClawApi(type: ProviderType): OpenClawProviderApi {
       return "openai-completions";
     case "custom":
       throw new Error("OpenClaw requires a concrete provider type; use openai-chat-compatible, anthropic, gemini, or ollama");
+    default:
+      throw new Error(`Unsupported OpenClaw provider type: ${type}`);
   }
 }
 
