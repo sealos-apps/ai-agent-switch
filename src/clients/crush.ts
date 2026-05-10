@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { existsSync } from "node:fs";
 import { BaseClientAdapter } from "./base";
+import { normalizeProviderType, type ProviderType } from "../config/schema";
 import type { ApplyClientConfigInput, ClientCurrentState, ClientId, PatchPlan } from "./types";
 import { parseJsonObject, readTextIfExists, recordAt, stringifyJson } from "./utils";
 
@@ -25,7 +26,7 @@ export class CrushAdapter extends BaseClientAdapter {
     const config = parseJsonObject(before);
     const providers = recordAt(config, "providers");
     providers[input.provider.id] = {
-      type: input.provider.type === "openai-compatible" ? "openai-compat" : input.provider.type,
+      type: crushProviderType(input.provider.type),
       base_url: input.provider.baseUrl,
       api_key: input.provider.apiKeyEnv ? `$${input.provider.apiKeyEnv}` : undefined,
       models: input.provider.models.map((model) => ({ id: model.id, name: model.name ?? model.id })),
@@ -49,4 +50,11 @@ export class CrushAdapter extends BaseClientAdapter {
       configPath: this.configPath,
     };
   }
+}
+
+function crushProviderType(type: ProviderType): string {
+  const normalized = normalizeProviderType(type);
+  if (normalized === "openai-chat-compatible") return "openai-compat";
+  if (normalized === "openai-responses") return "openai";
+  return normalized;
 }

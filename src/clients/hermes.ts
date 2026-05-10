@@ -3,6 +3,7 @@ import { BaseClientAdapter } from "./base";
 import type { ApplyClientConfigInput, ClientCurrentState, ClientId, PatchPlan, PatchFile } from "./types";
 import { envKeyForProvider, parseYamlObject, readTextIfExists, recordAt, stringifyYamlObject, writeEnvValue } from "./utils";
 import { writeAtomic } from "../fs/atomic";
+import { normalizeProviderType, type ProviderType } from "../config/schema";
 
 export class HermesAdapter extends BaseClientAdapter {
   id: ClientId = "hermes";
@@ -25,14 +26,16 @@ export class HermesAdapter extends BaseClientAdapter {
   async planApply(input: ApplyClientConfigInput): Promise<PatchPlan> {
     const before = await readTextIfExists(this.configPath);
     const config = parseYamlObject(before);
-    config.current_provider = input.provider.id;
-    config.current_model = input.modelId;
+    const model = recordAt(config, "model");
+    model.provider = input.provider.id;
+    model.default = input.modelId;
     const providers = recordAt(config, "providers");
     providers[input.provider.id] = {
       name: input.provider.name,
-      type: input.provider.type,
-      base_url: input.provider.baseUrl,
-      api_key_env: input.provider.apiKeyEnv ?? (input.provider.apiKey?.kind === "env" ? input.provider.apiKey.name : envKeyForProvider(input.provider.id)),
+      base_url: hermesBaseUrl(input.provider.type, input.provider.baseUrl),
+      key_env: input.provider.apiKeyEnv ?? (input.provider.apiKey?.kind === "env" ? input.provider.apiKey.name : envKeyForProvider(input.provider.id)),
+      transport: hermesTransport(input.provider.type),
+      default_model: input.provider.defaultModel ?? input.modelId,
       models: input.provider.models.map((model) => model.id),
     };
 
@@ -68,13 +71,28 @@ export class HermesAdapter extends BaseClientAdapter {
 
   async getCurrent(): Promise<ClientCurrentState> {
     const config = parseYamlObject(await readTextIfExists(this.configPath));
+    const model = config.model && typeof config.model === "object" && !Array.isArray(config.model)
+      ? config.model as Record<string, unknown>
+      : {};
     return {
       clientId: this.id,
-      providerId: typeof config.current_provider === "string" ? config.current_provider : undefined,
-      modelId: typeof config.current_model === "string" ? config.current_model : undefined,
+      providerId: typeof model.provider === "string" ? model.provider : undefined,
+      modelId: typeof model.default === "string" ? model.default : undefined,
       configPath: this.configPath,
     };
   }
+}
+
+function hermesTransport(type: ProviderType): "openai_chat" | "anthropic_messages" | "codex_responses" {
+  const normalized = normalizeProviderType(type);
+  if (normalized === "anthropic") return "anthropic_messages";
+  if (normalized === "openai-responses") return "codex_responses";
+  return "openai_chat";
+}
+
+function hermesBaseUrl(type: ProviderType, baseUrl: string | undefined): string | undefined {
+  if (!baseUrl || normalizeProviderType(type) !== "anthropic") return baseUrl;
+  return baseUrl.replace(/\/v1\/?$/, "");
 }
 
 function mergeEnv(text: string, key: string, assignment: string): string {

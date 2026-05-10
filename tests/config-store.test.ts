@@ -14,7 +14,7 @@ describe("ConfigStore", () => {
       expect(config.version).toBe(1);
       expect(config.proxy.enabled).toBe(false);
       expect(config.proxy.upstreamProxy).toBe("http://127.0.0.1:7890");
-      expect(config.clients.qwen?.enabled).toBe(true);
+      expect(config.clients).toEqual({});
     } finally {
       await rm(home, { recursive: true, force: true });
     }

@@ -6,11 +6,10 @@ import { tmpdir } from "node:os";
 import { AgentSwitchApp } from "../src/core/app";
 
 describe("AgentSwitchApp.useAllClients", () => {
-  test("dry-run creates plans for enabled clients without writing configs", async () => {
+  test("dry-run creates plans for supported clients without writing configs", async () => {
     const home = await mkdtemp(join(tmpdir(), "agent-switch-use-all-dry-"));
     try {
       const app = await createApp(home);
-      await app.setClientEnabled("openclaw", false);
 
       const result = await app.useAllClients({
         target: "openrouter/qwen/qwen3-coder",
@@ -19,18 +18,17 @@ describe("AgentSwitchApp.useAllClients", () => {
 
       expect(result.applied).toBe(false);
       expect(result.results.some((item) => item.clientId === "qwen" && item.status === "planned")).toBe(true);
-      expect(result.results.some((item) => item.clientId === "openclaw" && item.status === "skipped")).toBe(true);
+      expect(result.results.some((item) => item.status === "skipped")).toBe(false);
       expect(existsSync(join(home, ".qwen/settings.json"))).toBe(false);
     } finally {
       await rm(home, { recursive: true, force: true });
     }
   });
 
-  test("-y applies plans for all enabled clients", async () => {
+  test("-y applies plans for all supported clients", async () => {
     const home = await mkdtemp(join(tmpdir(), "agent-switch-use-all-apply-"));
     try {
       const app = await createApp(home);
-      await app.setClientEnabled("openclaw", false);
 
       const result = await app.useAllClients({
         target: "openrouter/qwen/qwen3-coder",
@@ -39,12 +37,13 @@ describe("AgentSwitchApp.useAllClients", () => {
 
       expect(result.applied).toBe(true);
       expect(result.results.some((item) => item.clientId === "qwen" && item.status === "applied")).toBe(true);
-      expect(result.results.some((item) => item.clientId === "openclaw" && item.status === "skipped")).toBe(true);
+      expect(result.results.some((item) => item.status === "skipped")).toBe(false);
       const qwen = JSON.parse(await readFile(join(home, ".qwen/settings.json"), "utf8"));
       const codex = await readFile(join(home, ".codex/config.toml"), "utf8");
+      const openclaw = JSON.parse(await readFile(join(home, ".openclaw/openclaw.json"), "utf8"));
       expect(qwen.model.name).toBe("qwen/qwen3-coder");
       expect(codex).toContain('model = "qwen/qwen3-coder"');
-      expect(existsSync(join(home, ".openclaw/openclaw.json"))).toBe(false);
+      expect(openclaw.agents.defaults.model.primary).toBe("openrouter/qwen/qwen3-coder");
     } finally {
       await rm(home, { recursive: true, force: true });
     }

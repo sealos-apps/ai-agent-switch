@@ -28,15 +28,17 @@ agent-switch config schema
 agent-switch client list
 agent-switch client list --json
 agent-switch client detect
-agent-switch client disable qwen
-agent-switch client enable qwen
+agent-switch client detect qwen
+agent-switch client show qwen
+agent-switch client use-proxy qwen --dry-run --json
+agent-switch client use-proxy qwen -y
 agent-switch provider list
 agent-switch provider list --json
 agent-switch provider preset-list
 agent-switch provider preset-add openrouter --api-key-env OPENROUTER_API_KEY
 agent-switch provider preset-add agent-switch-proxy
 agent-switch provider show openrouter
-agent-switch provider add --id openrouter --type openai-compatible --base-url https://openrouter.ai/api/v1 --api-key-env OPENROUTER_API_KEY --model qwen/qwen3-coder --default-model qwen/qwen3-coder
+agent-switch provider add --id openrouter --type openai-chat-compatible --base-url https://openrouter.ai/api/v1 --api-key-env OPENROUTER_API_KEY --model qwen/qwen3-coder --default-model qwen/qwen3-coder
 agent-switch provider model-add openrouter anthropic/claude-sonnet-4.5
 agent-switch provider model-remove openrouter qwen/qwen3-coder
 agent-switch provider default-model openrouter anthropic/claude-sonnet-4.5
@@ -47,10 +49,6 @@ agent-switch route set-default openrouter/qwen/qwen3-coder
 agent-switch route add-fallback openrouter/anthropic/claude-sonnet-4.5
 agent-switch route list
 agent-switch route list --json
-agent-switch use qwen openrouter/qwen/qwen3-coder -y
-agent-switch use qwen openrouter/qwen/qwen3-coder --dry-run --json
-agent-switch use-all openrouter/qwen/qwen3-coder --dry-run --json
-agent-switch use-all openrouter/qwen/qwen3-coder -y
 agent-switch proxy enable
 agent-switch proxy set --port 17890 --upstream-proxy http://127.0.0.1:7890 --retry true --max-attempts 3 --failover true
 agent-switch proxy start
@@ -69,11 +67,31 @@ as
 
 快捷键：
 
-- `j` / `k`：选择客户端。
-- `n` / `p`：选择 provider/model 候选。
-- `Enter`：应用当前选择。
-- `r`：刷新状态。
+- `↑` / `↓`：移动选择。
+- `Enter`：进入菜单或执行当前操作。
+- `Esc`：返回上一级。
+- `h`：打开帮助。
 - `q`：退出。
+
+TUI 首页是主菜单：
+
+```text
+Clients
+Providers
+Models
+```
+
+常用流程：
+
+1. 进入 `Providers`，选择 `Add from preset` 或 `Add custom provider` 添加 provider。
+2. 进入 `Models`，用 `r` / `f` 配置 agent-switch proxy 背后的 primary/fallback route。
+3. 进入 `Clients`，选择某个 client 后进入详情页，再选择继续使用当前配置或接入 agent-switch proxy。
+
+子菜单常用操作：
+
+- `Clients`：`Enter` 进入 client 详情；详情页中可选择 `Use current config` 或 `Use agent-switch proxy`。
+- `Providers`：`a` 添加 preset，`e` 编辑 provider，`x` 删除 provider，`t` 测试 provider。
+- `Models`：`a` 添加模型，`x` 删除模型，`*` 设置默认模型，`r` 设置 route primary，`f` 添加 fallback。
 
 非交互终端中，裸命令会退化为只读状态输出。
 
@@ -87,6 +105,8 @@ agent-switch doctor --json
 agent-switch config validate --json
 agent-switch client list --json
 agent-switch client detect --json
+agent-switch client detect qwen --json
+agent-switch client use-proxy qwen --dry-run --json
 agent-switch provider list --json
 agent-switch model list --json
 agent-switch route list --json
@@ -135,12 +155,19 @@ OpenRouter：
 agent-switch provider add \
   --id openrouter \
   --name OpenRouter \
-  --type openai-compatible \
+  --type openai-chat-compatible \
   --base-url https://openrouter.ai/api/v1 \
   --api-key-env OPENROUTER_API_KEY \
   --model qwen/qwen3-coder \
   --default-model qwen/qwen3-coder
 ```
+
+Provider type 里 OpenAI 相关的两条线要分开：
+
+- `openai-responses`：OpenAI Responses API，例如官方 OpenAI API。
+- `openai-chat-compatible`：OpenAI Chat Completions 兼容 endpoint，例如 OpenRouter、DeepSeek compatible mode、本地代理等。
+
+旧配置里的 `openai` 和 `openai-compatible` 仍然会被接受，分别按 `openai-responses` 和 `openai-chat-compatible` 处理。
 
 内置 preset 包括：
 
@@ -182,12 +209,30 @@ agent-switch model list
 agent-switch model list --json
 ```
 
-客户端开关：
+## 客户端配置
+
+查看 agent-switch 支持配置的 client 列表，不读取各 client 当前配置：
 
 ```bash
-agent-switch client disable qwen
-agent-switch client enable qwen
+agent-switch client list
+agent-switch client list --json
 ```
+
+进入某个 client 的当前配置读取：
+
+```bash
+agent-switch client show qwen
+agent-switch client detect qwen
+```
+
+让某个 client 接入本地 agent-switch proxy：
+
+```bash
+agent-switch client use-proxy qwen --dry-run --json
+agent-switch client use-proxy qwen -y
+```
+
+接入 proxy 后，client 自身只连接 `http://127.0.0.1:17890/v1` 并使用 `agent-switch/default`；真实 provider/model 由 `route` 决定。
 
 ## 代理路由
 
@@ -203,27 +248,27 @@ agent-switch route list
 
 删除 provider 或删除 provider 下的模型时，相关 route candidate 会自动移除，避免配置留下不可用引用。
 
-## 批量切换客户端
+## 高级：直接写客户端原生配置
 
-切换单个客户端：
+推荐路径是 `client use-proxy`：client 只连 agent-switch proxy，真实 provider/model 由 route 管。下面的 `use` / `use-all` 是高级路径，会把 provider/model 直接写进 client 原生配置。
+
+直接切换单个客户端：
 
 ```bash
 agent-switch use qwen openrouter/qwen/qwen3-coder -y
 ```
 
-预演所有启用客户端：
+直接预演所有支持的客户端：
 
 ```bash
 agent-switch use-all openrouter/qwen/qwen3-coder --dry-run --json
 ```
 
-应用到所有启用客户端：
+直接应用到所有支持的客户端：
 
 ```bash
 agent-switch use-all openrouter/qwen/qwen3-coder -y
 ```
-
-被 `client disable` 的客户端会自动跳过。
 
 ## 代理
 

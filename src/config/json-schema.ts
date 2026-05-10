@@ -1,3 +1,5 @@
+import { providerTypes } from "./schema";
+
 export function agentSwitchJsonSchema(): Record<string, unknown> {
   return {
     $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -10,7 +12,6 @@ export function agentSwitchJsonSchema(): Record<string, unknown> {
         type: "object",
         additionalProperties: {
           type: "object",
-          required: ["enabled"],
           properties: {
             enabled: { type: "boolean" },
             configPath: { type: "string" },
@@ -26,20 +27,7 @@ export function agentSwitchJsonSchema(): Record<string, unknown> {
             id: { type: "string" },
             name: { type: "string" },
             type: {
-              enum: [
-                "openai",
-                "anthropic",
-                "gemini",
-                "openai-compatible",
-                "openrouter",
-                "dashscope",
-                "deepseek",
-                "moonshot",
-                "siliconflow",
-                "ollama",
-                "lmstudio",
-                "custom",
-              ],
+              enum: providerTypes,
             },
             baseUrl: { type: "string" },
             apiKeyEnv: { type: "string" },

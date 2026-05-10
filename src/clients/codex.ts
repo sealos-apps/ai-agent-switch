@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { BaseClientAdapter } from "./base";
+import { normalizeProviderType, type ProviderType } from "../config/schema";
 import type { ApplyClientConfigInput, ClientCurrentState, ClientId, PatchPlan } from "./types";
 import { parseTomlObject, readTextIfExists, recordAt, stringifyTomlObject } from "./utils";
 
@@ -29,7 +30,7 @@ export class CodexAdapter extends BaseClientAdapter {
       name: input.provider.name,
       base_url: input.provider.baseUrl,
       env_key: input.provider.apiKeyEnv ?? (input.provider.apiKey?.kind === "env" ? input.provider.apiKey.name : undefined),
-      wire_api: input.provider.type === "openai-compatible" || input.provider.type === "openrouter" ? "responses" : undefined,
+      wire_api: codexWireApi(input.provider.type),
     };
 
     const file = before === undefined
@@ -47,4 +48,11 @@ export class CodexAdapter extends BaseClientAdapter {
       configPath: this.configPath,
     };
   }
+}
+
+function codexWireApi(type: ProviderType): "responses" | undefined {
+  const normalized = normalizeProviderType(type);
+  // Current Codex rejects chat wire_api and only accepts responses for custom model providers.
+  if (normalized === "openai-responses" || normalized === "openai-chat-compatible" || normalized === "openrouter") return "responses";
+  return undefined;
 }
