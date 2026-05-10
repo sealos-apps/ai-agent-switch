@@ -137,7 +137,7 @@ function renderStatic(status: AppStatus): void {
   }
 }
 
-async function handleEnter(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
+export async function handleEnter(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
   if (state.view === "menu") {
     return { state: reduceTuiState(state, { type: "open-view", view: viewForMainMenuItem(selectedMainMenuItem(state)) }, data), data };
   }
@@ -156,8 +156,12 @@ async function handleEnter(app: AgentSwitchApp, state: TuiState, data: TuiData):
     const presetId = selectedPresetId(state, data);
     if (!presetId) return withMessage(state, data, "warning", "没有可添加的 preset");
     const result = await executeTuiCommand(app, { type: "add-provider-preset", presetId });
-    const nextState = activateFirstModel({ ...state, view: "models", message: result.message }, result.data);
-    return { state: nextState, data: result.data };
+    const target = result.data.models.find((model) => model.providerId === presetId && model.isProviderDefault);
+    if (!target) throw new Error(`新增 preset 后未找到默认模型: ${presetId}`);
+    return {
+      state: focusModelTarget({ ...state, view: "models", message: result.message }, result.data, target.ref),
+      data: result.data,
+    };
   }
 
   if (state.view === "models") {
@@ -175,7 +179,7 @@ async function handleEnter(app: AgentSwitchApp, state: TuiState, data: TuiData):
         previousView: "clients",
         clientDetail: { clientId },
         selections: { ...state.selections, clientDetail: 0 },
-        message: { tone: "info", text: "选择 current config 或 agent-switch proxy" },
+        message: { tone: "info", text: "选择要应用的模型或 agent-switch proxy" },
       },
       data: nextData,
     };
@@ -252,12 +256,14 @@ async function handleClientShow(app: AgentSwitchApp, state: TuiState, data: TuiD
   return { state: { ...state, message: result.message }, data: result.data };
 }
 
-async function handleClientDetailEnter(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
+export async function handleClientDetailEnter(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
   const clientId = state.clientDetail?.clientId;
   if (!clientId) return withMessage(state, data, "warning", "没有选中的 client");
   const actionIndex = state.selections.clientDetail;
   if (actionIndex === 0) {
-    return withMessage(state, data, "success", `${clientId} 继续使用当前配置`);
+    if (!state.activeTargetRef) return withMessage(state, data, "warning", "请先在 Models 中选择模型");
+    const result = await executeTuiCommand(app, { type: "apply-client", clientId, target: state.activeTargetRef });
+    return { state: { ...state, message: result.message }, data: result.data };
   }
   if (actionIndex === 1) {
     const result = await executeTuiCommand(app, { type: "use-agent-switch-proxy", clientId });
@@ -276,7 +282,7 @@ async function handleDefaultModel(app: AgentSwitchApp, state: TuiState, data: Tu
   const target = selectedModelTarget(state, data);
   if (!target) return withMessage(state, data, "warning", "请选择模型");
   const result = await executeTuiCommand(app, { type: "set-provider-default-model", providerId: target.providerId, modelId: target.modelId });
-  return { state: { ...state, activeTargetRef: target.ref, message: result.message }, data: result.data };
+  return { state: focusModelTarget({ ...state, message: result.message }, result.data, target.ref), data: result.data };
 }
 
 async function handleRoutePrimary(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
@@ -284,7 +290,7 @@ async function handleRoutePrimary(app: AgentSwitchApp, state: TuiState, data: Tu
   const target = selectedModelTarget(state, data);
   if (!target) return withMessage(state, data, "warning", "没有可设置 route 的模型");
   const result = await executeTuiCommand(app, { type: "set-route-primary", target: target.ref });
-  return { state: { ...state, activeTargetRef: target.ref, message: result.message }, data: result.data };
+  return { state: focusModelTarget({ ...state, message: result.message }, result.data, target.ref), data: result.data };
 }
 
 async function handleRouteFallback(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
@@ -292,27 +298,23 @@ async function handleRouteFallback(app: AgentSwitchApp, state: TuiState, data: T
   const target = selectedModelTarget(state, data);
   if (!target) return withMessage(state, data, "warning", "没有可添加 fallback 的模型");
   const result = await executeTuiCommand(app, { type: "add-route-fallback", target: target.ref });
-  return { state: { ...state, activeTargetRef: target.ref, message: result.message }, data: result.data };
+  return { state: focusModelTarget({ ...state, message: result.message }, result.data, target.ref), data: result.data };
 }
 
-function activateFirstModel(state: TuiState, data: TuiData): TuiState {
-  const firstModel = data.models[0];
-  if (!firstModel || state.activeTargetRef) return state;
-  return { ...state, activeTargetRef: firstModel.ref };
-}
-
-async function handleFormKey(app: AgentSwitchApp, state: TuiState, data: TuiData, key: string): Promise<{ state: TuiState; data: TuiData }> {
+export async function handleFormKey(app: AgentSwitchApp, state: TuiState, data: TuiData, key: string): Promise<{ state: TuiState; data: TuiData }> {
   if (!state.form) return { state, data };
+  const field = currentField(state);
   if (key === "\u001b") return { state: reduceTuiState(state, { type: "back" }, data), data };
   if (key === "\u001b[B") return { state: moveFormField(state, 1), data };
   if (key === "\u001b[A") return { state: moveFormField(state, -1), data };
   if (key === "\u001b[C") return { state: cycleCurrentOption(state, 1), data };
   if (key === "\u001b[D") return { state: cycleCurrentOption(state, -1), data };
-  if (key === " " && currentField(state)?.options?.length) return { state: cycleCurrentOption(state, 1), data };
-  if (currentField(state)?.options?.length && key.length === 1 && key >= " ") return { state, data };
+  if (key === " " && field?.options?.length) return { state: cycleCurrentOption(state, 1), data };
+  if (field?.readOnly && (key === "\u007f" || key === "\b" || isPrintableInput(key))) return { state, data };
+  if (field?.options?.length && (key === "\u007f" || key === "\b" || isPrintableInput(key))) return { state, data };
   if (key === "\u007f" || key === "\b") return { state: updateCurrentField(state, (value) => value.slice(0, -1)), data };
   if (key === "\r") return submitForm(app, state, data);
-  if (key.length === 1 && key >= " ") return { state: updateCurrentField(state, (value) => value + key), data };
+  if (isPrintableInput(key)) return { state: updateCurrentField(state, (value) => value + key), data };
   return { state, data };
 }
 
@@ -343,7 +345,7 @@ function openCustomProviderForm(state: TuiState, provider?: ProviderProfile): Tu
       activeField: 0,
       existingProvider: provider,
       fields: [
-        { name: "id", label: "id", value: provider?.id ?? "", required: true },
+        { name: "id", label: "id", value: provider?.id ?? "", required: true, readOnly: Boolean(provider) },
         { name: "name", label: "name", value: provider?.name ?? "", required: true },
         {
           name: "type",
@@ -423,12 +425,26 @@ async function submitForm(app: AgentSwitchApp, state: TuiState, data: TuiData): 
   if (state.form.kind === "custom-provider") {
     const provider = buildCustomProviderFromForm(state.form);
     const result = await executeTuiCommand(app, { type: "add-custom-provider", provider });
-    return { state: { ...state, view: "models", previousView: undefined, form: undefined, activeTargetRef: `${provider.id}/${provider.defaultModel ?? provider.models[0]?.id}`, message: result.message }, data: result.data };
+    return {
+      state: focusModelTarget(
+        { ...state, view: "models", previousView: undefined, form: undefined, message: result.message },
+        result.data,
+        `${provider.id}/${provider.defaultModel}`,
+      ),
+      data: result.data,
+    };
   }
 
   const values = formValues(state.form);
   const result = await executeTuiCommand(app, { type: "add-model", providerId: values.providerId!, modelId: values.modelId! });
-  return { state: { ...state, view: "models", previousView: undefined, form: undefined, activeTargetRef: `${values.providerId}/${values.modelId}`, message: result.message }, data: result.data };
+  return {
+    state: focusModelTarget(
+      { ...state, view: "models", previousView: undefined, form: undefined, message: result.message },
+      result.data,
+      `${values.providerId}/${values.modelId}`,
+    ),
+    data: result.data,
+  };
 }
 
 function formValues(form: TuiForm): Record<string, string | undefined> {
@@ -445,7 +461,7 @@ export function buildCustomProviderFromForm(form: TuiForm): ProviderProfile {
   if (!defaultModel) throw new Error("请填写 models");
 
   return {
-    id: values.id!,
+    id: form.existingProvider?.id ?? values.id!,
     name: values.name!,
     type: values.type! as ProviderProfile["type"],
     models: models.map((id) => ({ id })),
@@ -456,6 +472,16 @@ export function buildCustomProviderFromForm(form: TuiForm): ProviderProfile {
     ...(form.existingProvider?.headers ? { headers: form.existingProvider.headers } : {}),
     ...(form.existingProvider?.params ? { params: form.existingProvider.params } : {}),
   };
+}
+
+function focusModelTarget(state: TuiState, data: TuiData, targetRef: string): TuiState {
+  const selectedIndex = data.models.findIndex((model) => model.ref === targetRef);
+  if (selectedIndex < 0) throw new Error(`Model target not found: ${targetRef}`);
+  return { ...state, activeTargetRef: targetRef, selections: { ...state.selections, models: selectedIndex } };
+}
+
+function isPrintableInput(key: string): boolean {
+  return key.length > 0 && !Array.from(key).some((char) => char < " " || char === "\u007f");
 }
 
 function withMessage(

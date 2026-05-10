@@ -296,7 +296,7 @@ cli
         console.log(pc.yellow("已取消，未写入客户端配置"));
         return;
       }
-      await app.applyPlan(result.plan);
+      await app.useClient({ clientId: parseClientId(client), target, yes: true });
       console.log(pc.green("OK 已应用"));
       return;
     }

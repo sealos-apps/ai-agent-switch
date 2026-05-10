@@ -28,19 +28,19 @@ export function renderTuiFrame(snapshot: RenderSnapshot, size: { rows: number; c
   const footerRows = footer.slice(-maxRows);
   const headerRows = header.slice(0, Math.max(0, maxRows - footerRows.length));
   const bodyMaxRows = Math.max(0, maxRows - headerRows.length - footerRows.length);
-  return fitFrame([...headerRows, ...renderBody(snapshot).slice(0, bodyMaxRows), ...footerRows], size.rows, size.cols);
+  return fitFrame([...headerRows, ...renderBody(snapshot, bodyMaxRows), ...footerRows], size.rows, size.cols);
 }
 
-function renderBody(snapshot: RenderSnapshot): string[] {
-  if (snapshot.state.view === "help") return renderHelp(snapshot.state.previousView ?? "menu");
-  if (snapshot.state.view === "clients") return renderClients(snapshot);
-  if (snapshot.state.view === "client-detail") return renderClientDetail(snapshot);
-  if (snapshot.state.view === "providers") return renderProviders(snapshot);
-  if (snapshot.state.view === "presets") return renderPresets(snapshot);
-  if (snapshot.state.view === "models") return renderModels(snapshot);
-  if (snapshot.state.view === "custom-provider" || snapshot.state.view === "add-model") return renderForm(snapshot);
-  if (snapshot.state.view === "confirm") return renderConfirm(snapshot);
-  return renderMenu(snapshot);
+function renderBody(snapshot: RenderSnapshot, maxRows: number): string[] {
+  if (snapshot.state.view === "help") return limitLines(renderHelp(snapshot.state.previousView ?? "menu"), maxRows);
+  if (snapshot.state.view === "clients") return renderClients(snapshot, maxRows);
+  if (snapshot.state.view === "client-detail") return limitLines(renderClientDetail(snapshot), maxRows);
+  if (snapshot.state.view === "providers") return renderProviders(snapshot, maxRows);
+  if (snapshot.state.view === "presets") return renderPresets(snapshot, maxRows);
+  if (snapshot.state.view === "models") return renderModels(snapshot, maxRows);
+  if (snapshot.state.view === "custom-provider" || snapshot.state.view === "add-model") return limitLines(renderForm(snapshot), maxRows);
+  if (snapshot.state.view === "confirm") return limitLines(renderConfirm(snapshot), maxRows);
+  return limitLines(renderMenu(snapshot), maxRows);
 }
 
 function renderMenu(snapshot: RenderSnapshot): string[] {
@@ -52,13 +52,17 @@ function renderMenu(snapshot: RenderSnapshot): string[] {
   ];
 }
 
-function renderClients(snapshot: RenderSnapshot): string[] {
-  if (snapshot.data.clients.length === 0) return ["Clients", "", "没有可管理的 client"];
-  return [
-    "Clients",
-    "",
-    ...snapshot.data.clients.map((client, index) => `${pointer(snapshot.state.selections.clients === index)} ${client.displayName}`),
-  ];
+function renderClients(snapshot: RenderSnapshot, maxRows: number): string[] {
+  const header = ["Clients", ""];
+  if (snapshot.data.clients.length === 0) return limitLines([...header, "没有可管理的 client"], maxRows);
+  const selectedIndex = snapshot.state.selections.clients;
+  const rows = windowedLines(
+    snapshot.data.clients,
+    selectedIndex,
+    Math.max(0, maxRows - header.length),
+    (client, index) => `${pointer(selectedIndex === index)} ${client.displayName}`,
+  );
+  return [...header, ...rows].slice(0, maxRows);
 }
 
 function renderClientDetail(snapshot: RenderSnapshot): string[] {
@@ -68,7 +72,7 @@ function renderClientDetail(snapshot: RenderSnapshot): string[] {
   const current = snapshot.data.clientCurrent;
   const route = snapshot.data.status.routes.default?.candidates ?? [];
   const mode = current?.providerId === "agent-switch-proxy" || current?.modelId === "agent-switch/default" ? "agent-switch proxy" : "current config";
-  const actions = ["Use current config", "Use agent-switch proxy", "Show current config", "Detect this client"];
+  const actions = ["Apply current model", "Use agent-switch proxy", "Show current config", "Detect this client"];
   return [
     `Client / ${client.displayName}`,
     "",
@@ -87,7 +91,7 @@ function renderClientDetail(snapshot: RenderSnapshot): string[] {
   ];
 }
 
-function renderProviders(snapshot: RenderSnapshot): string[] {
+function renderProviders(snapshot: RenderSnapshot, maxRows: number): string[] {
   const lines = [
     "Providers",
     "",
@@ -96,33 +100,38 @@ function renderProviders(snapshot: RenderSnapshot): string[] {
   ];
   if (snapshot.data.status.providers.length === 0) {
     lines.push("", "还没有 provider。先添加 preset，之后才能在 Models 中选择模型。");
-    return lines;
+    return limitLines(lines, maxRows);
   }
-  lines.push("");
-  for (const [index, provider] of snapshot.data.status.providers.entries()) {
-    lines.push(
+  const selectedIndex = Math.max(0, snapshot.state.selections.providers - 2);
+  const rows = windowedLines(
+    snapshot.data.status.providers,
+    selectedIndex,
+    Math.max(0, maxRows - lines.length),
+    (provider, index) =>
       `${pointer(snapshot.state.selections.providers === index + 2)} ${provider.id.padEnd(18)} ${provider.type.padEnd(18)} ${provider.models.length} models`,
-    );
-  }
-  return lines;
+  );
+  return [...lines, ...rows].slice(0, maxRows);
 }
 
-function renderPresets(snapshot: RenderSnapshot): string[] {
-  return [
-    "Provider Presets",
-    "",
-    ...snapshot.data.presets.map(
-      (preset, index) => `${pointer(snapshot.state.selections.presets === index)} ${preset.id.padEnd(20)} ${preset.models.slice(0, 3).join(", ")}`,
-    ),
-  ];
+function renderPresets(snapshot: RenderSnapshot, maxRows: number): string[] {
+  const header = ["Provider Presets", ""];
+  const rows = windowedLines(
+    snapshot.data.presets,
+    snapshot.state.selections.presets,
+    Math.max(0, maxRows - header.length),
+    (preset, index) => `${pointer(snapshot.state.selections.presets === index)} ${preset.id.padEnd(20)} ${preset.models.slice(0, 3).join(", ")}`,
+  );
+  return [...header, ...rows].slice(0, maxRows);
 }
 
-function renderModels(snapshot: RenderSnapshot): string[] {
-  if (snapshot.data.models.length === 0) return ["Models", "", "还没有模型。先到 Providers 添加 provider preset。"];
-  return [
-    "Models",
-    "",
-    ...snapshot.data.models.map((model, index) => {
+function renderModels(snapshot: RenderSnapshot, maxRows: number): string[] {
+  const header = ["Models", ""];
+  if (snapshot.data.models.length === 0) return limitLines([...header, "还没有模型。先到 Providers 添加 provider preset。"], maxRows);
+  const rows = windowedLines(
+    snapshot.data.models,
+    snapshot.state.selections.models,
+    Math.max(0, maxRows - header.length),
+    (model, index) => {
       const tags = [
         model.ref === snapshot.state.activeTargetRef ? "active" : undefined,
         model.isProviderDefault ? "default" : undefined,
@@ -130,8 +139,9 @@ function renderModels(snapshot: RenderSnapshot): string[] {
       ].filter(Boolean);
       const suffix = tags.length > 0 ? ` [${tags.join(", ")}]` : "";
       return `${pointer(snapshot.state.selections.models === index)} ${model.providerId.padEnd(14)} ${model.modelId}${suffix}`;
-    }),
-  ];
+    },
+  );
+  return [...header, ...rows].slice(0, maxRows);
 }
 
 function renderHelp(view: TuiView): string[] {
@@ -146,7 +156,7 @@ function renderHelp(view: TuiView): string[] {
     "q       退出",
   ];
   if (view === "clients") lines.push("", "Clients: Enter 进入 client 配置");
-  if (view === "client-detail") lines.push("", "Client: Enter 执行当前动作，Esc 返回 Clients");
+  if (view === "client-detail") lines.push("", "Client: Enter 应用当前模型 / 代理 / 查看 / 探测，Esc 返回 Clients");
   if (view === "providers") lines.push("", "Providers: Enter 选择，a 添加 preset，e 编辑，x 删除，t 测试");
   if (view === "models") lines.push("", "Models: Enter 设为当前模型，a 添加模型，x 删除，* 默认，r route，f fallback");
   return lines;
@@ -169,7 +179,8 @@ function renderForm(snapshot: RenderSnapshot): string[] {
       const required = field.required ? "*" : " ";
       const label = field.optionLabels?.[field.value];
       const value = field.options?.length ? `<${field.value}>${label ? ` ${label}` : ""}` : field.value;
-      return `${pointer(snapshot.state.form?.activeField === index)} ${field.label.padEnd(12)}${required} ${value}`;
+      const lock = field.readOnly ? " [locked]" : "";
+      return `${pointer(snapshot.state.form?.activeField === index)} ${field.label.padEnd(12)}${required} ${value}${lock}`;
     }),
     ...optionHint,
   ];
@@ -250,5 +261,67 @@ function messageToneLabel(tone: TuiMessage["tone"]): string {
 
 function fitFrame(lines: string[], rows: number, cols: number): string {
   const visible = lines.slice(0, Math.max(1, rows));
-  return visible.map((line) => line.slice(0, Math.max(1, cols - 1))).join("\n");
+  return visible.map((line) => truncateAnsiLine(line, Math.max(1, cols - 1))).join("\n");
+}
+
+function limitLines(lines: string[], maxRows: number): string[] {
+  return lines.slice(0, Math.max(0, maxRows));
+}
+
+function windowedLines<T>(
+  items: readonly T[],
+  selectedIndex: number,
+  visibleCount: number,
+  renderItem: (item: T, index: number) => string,
+): string[] {
+  if (visibleCount <= 0 || items.length === 0) return [];
+  if (items.length <= visibleCount) return items.map(renderItem);
+  const { start, end } = windowRange(items.length, selectedIndex, visibleCount);
+  return items.slice(start, end).map((item, offset) => renderItem(item, start + offset));
+}
+
+function windowRange(length: number, selectedIndex: number, visibleCount: number): { start: number; end: number } {
+  if (visibleCount <= 0 || length <= visibleCount) return { start: 0, end: length };
+  const selected = clamp(selectedIndex, 0, length - 1);
+  const half = Math.floor(visibleCount / 2);
+  const maxStart = Math.max(0, length - visibleCount);
+  const start = Math.min(maxStart, Math.max(0, selected - half));
+  return { start, end: start + visibleCount };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function truncateAnsiLine(line: string, maxCols: number): string {
+  if (maxCols <= 0) return "";
+  let visible = 0;
+  let index = 0;
+  let result = "";
+  while (index < line.length && visible < maxCols) {
+    const char = line[index]!;
+    if (char === "\u001b" && line[index + 1] === "[") {
+      const end = consumeAnsiCsi(line, index + 2);
+      if (end < 0) break;
+      result += line.slice(index, end + 1);
+      index = end + 1;
+      continue;
+    }
+    const codePoint = line.codePointAt(index)!;
+    result += String.fromCodePoint(codePoint);
+    index += codePoint > 0xffff ? 2 : 1;
+    visible += 1;
+  }
+  if (visible >= maxCols && index < line.length && !result.endsWith("\u001b[0m")) {
+    result += "\u001b[0m";
+  }
+  return result;
+}
+
+function consumeAnsiCsi(text: string, start: number): number {
+  for (let index = start; index < text.length; index += 1) {
+    const char = text[index]!;
+    if (char >= "@" && char <= "~") return index;
+  }
+  return -1;
 }

@@ -133,7 +133,7 @@ export async function executeTuiCommand(app: TuiApp, command: TuiCommand): Promi
 
   if (command.type === "apply-client") {
     await app.useClient({ clientId: command.clientId, target: command.target, yes: true });
-    return { data: await loadTuiData(app), message: { tone: "success", text: `已应用 ${command.target} 到 ${command.clientId}` } };
+    return { data: await loadTuiData(app, { clientId: command.clientId }), message: { tone: "success", text: `已应用 ${command.target} 到 ${command.clientId}` } };
   }
 
   if (command.type === "apply-all") {

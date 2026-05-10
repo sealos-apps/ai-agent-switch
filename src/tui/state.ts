@@ -27,7 +27,7 @@ export function reduceTuiState(state: TuiState, action: TuiStateAction, data: Tu
     return { ...state, view: action.view, previousView: state.view === "help" ? state.previousView : state.view };
   }
   if (action.type === "back") {
-    if (state.view === "help") return { ...state, view: state.previousView ?? "menu", previousView: undefined };
+    if (state.view === "help") return { ...state, view: state.helpReturnView ?? state.previousView ?? "menu", helpReturnView: undefined };
     if (state.view === "custom-provider" || state.view === "add-model" || state.view === "confirm") {
       return { ...state, view: state.previousView ?? "menu", previousView: undefined, form: undefined, confirm: undefined };
     }
@@ -38,7 +38,7 @@ export function reduceTuiState(state: TuiState, action: TuiStateAction, data: Tu
     return { ...state, view: state.previousView ?? "menu", previousView: undefined };
   }
   if (action.type === "help") {
-    return { ...state, previousView: state.view, view: "help" };
+    return { ...state, helpReturnView: state.view, view: "help" };
   }
   if (action.type === "message") {
     return { ...state, message: action.message };

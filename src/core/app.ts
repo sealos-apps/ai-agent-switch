@@ -356,7 +356,7 @@ export class AgentSwitchApp {
       id: "agent-switch-proxy",
       name: "agent-switch Proxy",
       type: "openai-chat-compatible",
-      baseUrl: `http://${config.proxy.host}:${config.proxy.port}/v1`,
+      baseUrl: proxyBaseUrl(config.proxy.host, config.proxy.port),
       models: [{ id: modelId }],
       defaultModel: modelId,
     };
@@ -465,4 +465,9 @@ export class AgentSwitchApp {
       checks,
     };
   }
+}
+
+function proxyBaseUrl(host: string, port: number): string {
+  const requestHost = host === "0.0.0.0" ? "127.0.0.1" : host;
+  return `http://${requestHost}:${port}/v1`;
 }

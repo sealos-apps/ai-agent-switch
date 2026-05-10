@@ -45,7 +45,7 @@ SSH_PORT=PORT
 当前工作区包含未提交改动。为了测试当前本地版本，使用 `rsync` 同步源码到 VM：
 
 ```bash
-cd /Users/night/Documents/code/sealos/a/agent-switch
+cd /path/to/agent-switch
 
 rsync -az --delete \
   --exclude node_modules \

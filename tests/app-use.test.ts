@@ -85,4 +85,22 @@ describe("AgentSwitchApp.useClient", () => {
       await rm(home, { recursive: true, force: true });
     }
   });
+
+  test("maps 0.0.0.0 proxy host to localhost in generated client config", async () => {
+    const home = await mkdtemp(join(tmpdir(), "agent-switch-use-proxy-host-"));
+    try {
+      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      await app.updateProxyConfig({ host: "0.0.0.0" });
+
+      await app.useClientProxy({
+        clientId: "qwen",
+        yes: true,
+      });
+
+      const settings = JSON.parse(await readFile(join(home, ".qwen/settings.json"), "utf8"));
+      expect(settings.modelProviders["agent-switch-proxy"].baseUrl).toBe("http://127.0.0.1:17890/v1");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 });

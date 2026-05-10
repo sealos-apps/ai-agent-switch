@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { providerTypeLabels, selectableProviderTypes, type ProviderProfile, type ValidationResult } from "../src/config/schema";
 import type { AppStatus, ModelTarget } from "../src/core/app";
 import { keyToTuiAction } from "../src/tui/input";
-import { buildCustomProviderFromForm } from "../src/tui/app";
+import { buildCustomProviderFromForm, handleClientDetailEnter, handleEnter, handleFormKey } from "../src/tui/app";
 import { createTuiState, reduceTuiState, selectedMainMenuItem, selectedModelTarget } from "../src/tui/state";
 import { renderTuiFrame } from "../src/tui/render";
 import { executeTuiCommand } from "../src/tui/controller";
@@ -43,6 +43,95 @@ describe("TUI menu state", () => {
 
     expect(state.view).toBe("providers");
     expect(state.previousView).toBeUndefined();
+  });
+
+  test("returns from help to the underlying view without breaking its back chain", () => {
+    let state = createTuiState();
+    state = reduceTuiState(state, { type: "open-view", view: "providers" }, dataWithProviders());
+    state = reduceTuiState(state, { type: "open-view", view: "presets" }, dataWithProviders());
+    state = reduceTuiState(state, { type: "help" }, dataWithProviders());
+    state = reduceTuiState(state, { type: "back" }, dataWithProviders());
+
+    expect(state.view).toBe("presets");
+    expect(state.previousView).toBe("providers");
+
+    state = reduceTuiState(state, { type: "back" }, dataWithProviders());
+    expect(state.view).toBe("providers");
+  });
+
+  test("focuses the newly added preset model after adding a provider preset", async () => {
+    const calls: string[] = [];
+    const app = tuiApp({
+      addProviderPreset: async (presetId: string) => {
+        calls.push(presetId);
+        return {
+          id: "deepseek",
+          name: "DeepSeek",
+          type: "openai-chat-compatible",
+          baseUrl: "https://api.deepseek.com/v1",
+          models: [{ id: "deepseek-chat" }, { id: "deepseek-reasoner" }],
+          defaultModel: "deepseek-chat",
+        };
+      },
+      listProviders: async () => [
+        statusWithProviders().providers[0]!,
+        {
+          id: "deepseek",
+          name: "DeepSeek",
+          type: "openai-chat-compatible",
+          baseUrl: "https://api.deepseek.com/v1",
+          models: [{ id: "deepseek-chat" }, { id: "deepseek-reasoner" }],
+          defaultModel: "deepseek-chat",
+        },
+      ],
+      listModelTargets: async () => [
+        {
+          providerId: "openrouter",
+          providerName: "OpenRouter",
+          providerType: "openai-compatible",
+          modelId: "qwen/qwen3-coder",
+          ref: "openrouter/qwen/qwen3-coder",
+          isProviderDefault: true,
+        },
+        {
+          providerId: "deepseek",
+          providerName: "DeepSeek",
+          providerType: "openai-chat-compatible",
+          modelId: "deepseek-chat",
+          ref: "deepseek/deepseek-chat",
+          isProviderDefault: true,
+        },
+        {
+          providerId: "deepseek",
+          providerName: "DeepSeek",
+          providerType: "openai-chat-compatible",
+          modelId: "deepseek-reasoner",
+          ref: "deepseek/deepseek-reasoner",
+          isProviderDefault: false,
+        },
+      ],
+    });
+    const state = {
+      ...createTuiState(),
+      view: "presets" as const,
+      previousView: "providers" as const,
+      selections: { ...createTuiState().selections, presets: 1 },
+      activeTargetRef: "openrouter/qwen/qwen3-coder",
+    };
+    const data = {
+      ...dataWithProviders(),
+      presets: [
+        { id: "openrouter", name: "OpenRouter", models: ["qwen/qwen3-coder"] },
+        { id: "deepseek", name: "DeepSeek", models: ["deepseek-chat", "deepseek-reasoner"] },
+      ],
+    };
+
+    const result = await handleEnter(app as never, state as never, data as never);
+
+    expect(calls).toEqual(["deepseek"]);
+    expect(result.state.view).toBe("models");
+    expect(result.state.activeTargetRef).toBe("deepseek/deepseek-chat");
+    expect(result.state.selections.models).toBe(1);
   });
 });
 
@@ -88,7 +177,7 @@ describe("TUI menu rendering", () => {
 
     expect(frame).toContain("Client / OpenAI Codex");
     expect(frame).toContain("su8 / gpt-5.5");
-    expect(frame).toContain("Use current config");
+    expect(frame).toContain("Apply current model");
     expect(frame).toContain("Use agent-switch proxy");
     expect(frame).toContain("sub2api/gpt-5.5 -> su8/gpt-5.4");
   });
@@ -108,6 +197,18 @@ describe("TUI menu rendering", () => {
 
     expect(frame).toContain("error");
     expect(frame).toContain("boom");
+  });
+
+  test("keeps the selected provider visible while scrolling long lists", () => {
+    const data = dataWithManyProviders();
+    const state = {
+      ...reduceTuiState(createTuiState(), { type: "open-view", view: "providers" }, data),
+      selections: { ...createTuiState().selections, providers: 2 + 12 },
+    };
+    const frame = renderTuiFrame({ state, data }, { rows: 16, cols: 100 });
+
+    expect(frame).toContain("provider-12");
+    expect(frame).toContain("provider-13");
   });
 
   test("keeps footer status and message visible when provider list is long", () => {
@@ -156,6 +257,103 @@ describe("TUI menu rendering", () => {
     }
     expect(frame).toContain("Space 切换选项");
     expect(frame).toContain("Ctrl-C 退出");
+  });
+
+  test("accepts pasted multi-character input in text fields", async () => {
+    const state = {
+      ...createTuiState(),
+      view: "custom-provider" as const,
+      form: {
+        kind: "custom-provider" as const,
+        activeField: 3,
+        fields: [
+          { name: "id", label: "id", value: "local", required: true },
+          { name: "name", label: "name", value: "Local", required: true },
+          {
+            name: "type",
+            label: "type",
+            value: "openai-chat-compatible",
+            required: true,
+            options: selectableProviderTypes,
+            optionLabels: providerTypeLabels,
+          },
+          { name: "baseUrl", label: "baseUrl", value: "", required: false },
+          { name: "apiKeyEnv", label: "apiKeyEnv", value: "", required: false },
+          { name: "models", label: "models", value: "a", required: true },
+        ],
+      },
+    };
+    const result = await handleFormKey(tuiApp() as never, state as never, dataWithoutProviders() as never, "https://api.example/v1");
+
+    expect(result.state.form?.fields[3]?.value).toBe("https://api.example/v1");
+  });
+
+  test("keeps the provider id read-only when editing a custom provider", async () => {
+    const state = {
+      ...createTuiState(),
+      view: "custom-provider" as const,
+      form: {
+        kind: "custom-provider" as const,
+        activeField: 0,
+        existingProvider: {
+          id: "local",
+          name: "Local",
+          type: "openai-chat-compatible",
+          baseUrl: "https://old.example/v1",
+          models: [{ id: "a" }],
+          defaultModel: "a",
+        },
+        fields: [
+          { name: "id", label: "id", value: "local", required: true, readOnly: true },
+          { name: "name", label: "name", value: "Local", required: true },
+          {
+            name: "type",
+            label: "type",
+            value: "openai-chat-compatible",
+            required: true,
+            options: selectableProviderTypes,
+            optionLabels: providerTypeLabels,
+          },
+          { name: "baseUrl", label: "baseUrl", value: "https://old.example/v1", required: false },
+          { name: "apiKeyEnv", label: "apiKeyEnv", value: "", required: false },
+          { name: "models", label: "models", value: "a", required: true },
+        ],
+      },
+    };
+
+    const result = await handleFormKey(tuiApp() as never, state as never, dataWithoutProviders() as never, "x");
+
+    expect(result.state.form?.fields[0]?.value).toBe("local");
+  });
+
+  test("keeps select fields unchanged when pressing Backspace", async () => {
+    const state = {
+      ...createTuiState(),
+      view: "custom-provider" as const,
+      form: {
+        kind: "custom-provider" as const,
+        activeField: 2,
+        fields: [
+          { name: "id", label: "id", value: "local", required: true },
+          { name: "name", label: "name", value: "Local", required: true },
+          {
+            name: "type",
+            label: "type",
+            value: "openai-chat-compatible",
+            required: true,
+            options: selectableProviderTypes,
+            optionLabels: providerTypeLabels,
+          },
+          { name: "baseUrl", label: "baseUrl", value: "https://old.example/v1", required: false },
+          { name: "apiKeyEnv", label: "apiKeyEnv", value: "", required: false },
+          { name: "models", label: "models", value: "a", required: true },
+        ],
+      },
+    };
+
+    const result = await handleFormKey(tuiApp() as never, state as never, dataWithoutProviders() as never, "\u007f");
+
+    expect(result.state.form?.fields[2]?.value).toBe("openai-chat-compatible");
   });
 
   test("renders confirm footer with quit hint", () => {
@@ -213,6 +411,15 @@ describe("TUI menu rendering", () => {
     expect(provider.baseUrl).toBe("https://new.example/v1");
     expect(provider.apiKeyEnv).toBe("LOCAL_API_KEY");
   });
+
+  test("does not leave broken ANSI sequences when truncating colored output", () => {
+    const state = { ...createTuiState(), message: { tone: "error" as const, text: "boom" } };
+    const frame = renderTuiFrame({ state, data: dataWithProviders() }, { rows: 24, cols: 6 });
+
+    for (const line of frame.split("\n")) {
+      expect(line).not.toMatch(/\u001b\[[0-9;?]*$/);
+    }
+  });
 });
 
 describe("TUI command execution", () => {
@@ -269,6 +476,30 @@ describe("TUI command execution", () => {
     expect(calls).toEqual(["codex:true"]);
     expect(result.message.text).toContain("agent-switch proxy");
     expect(result.data.clientCurrent?.providerId).toBe("agent-switch-proxy");
+  });
+
+  test("applies the selected model to a client from client detail", async () => {
+    const calls: string[] = [];
+    const app = tuiApp({
+      useClient: async (input: { clientId: string; target: string; yes: boolean }) => {
+        calls.push(`${input.clientId}:${input.target}:${input.yes}`);
+        return { applied: true, requiresConfirmation: false, plan: { clientId: input.clientId, summary: "ok", files: [] } };
+      },
+    });
+    const state = {
+      ...createTuiState(),
+      view: "client-detail" as const,
+      previousView: "clients" as const,
+      clientDetail: { clientId: "codex" as const },
+      activeTargetRef: "openrouter/qwen/qwen3-coder",
+      selections: { ...createTuiState().selections, clientDetail: 0 },
+    };
+
+    const result = await handleClientDetailEnter(app as never, state as never, dataWithClientCurrent() as never);
+
+    expect(calls).toEqual(["codex:openrouter/qwen/qwen3-coder:true"]);
+    expect(result.state.message.text).toContain("已应用");
+    expect(result.data.clientCurrent?.providerId).toBe("su8");
   });
 
   test("adds a custom provider through the controller", async () => {

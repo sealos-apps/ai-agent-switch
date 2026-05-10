@@ -41,6 +41,7 @@ export type TuiData = {
 export type TuiState = {
   view: TuiView;
   previousView?: TuiView | undefined;
+  helpReturnView?: TuiView | undefined;
   selections: {
     menu: number;
     clients: number;
@@ -68,6 +69,7 @@ export type TuiFormField = {
   label: string;
   value: string;
   required: boolean;
+  readOnly?: boolean | undefined;
   options?: readonly string[] | undefined;
   optionLabels?: Record<string, string> | undefined;
 };

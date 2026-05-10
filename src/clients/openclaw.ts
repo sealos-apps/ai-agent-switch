@@ -77,7 +77,6 @@ function openClawApi(type: ProviderType): OpenClawProviderApi {
       return "ollama";
     case "openai-responses":
       return "openai-responses";
-    case "openai-compatible":
     case "openai-chat-compatible":
     case "openrouter":
     case "dashscope":
