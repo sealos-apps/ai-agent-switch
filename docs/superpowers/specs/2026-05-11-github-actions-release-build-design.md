@@ -24,8 +24,8 @@
 
 - 发布对象是 **standalone executable**，不是只上传 `dist/` 下的 JS bundle。
 - 发布触发分为两类：推送 `v*.*.*` tag 自动发布，`workflow_dispatch` 手动重跑。
-- 初期支持 `linux-x64`、`darwin-arm64` 和 `darwin-x64`，不先做 Windows。
-- 每个平台同时提供 `agent-switch` 和 `as` 两个可执行文件。
+- 初期支持 `linux-x64`、`darwin-arm64`、`darwin-x64` 和 `windows-x64`。
+- 每个平台同时提供 `agent-switch` 和 `as` 两个可执行文件；Windows 产物使用 `.exe` 后缀。
 - 发布前必须先跑 `bun test` 和 `bun run typecheck`。
 - 每次发布都生成 `SHA256SUMS`，便于校验下载完整性。
 - 发布时只使用仓库自带的 `GITHUB_TOKEN`，不引入个人访问令牌。
@@ -55,7 +55,7 @@
 缺点：
 
 - 需要新增一个打包脚本和 release workflow。
-- 首版不做 Windows，平台覆盖范围有限。
+- 需要同时处理 Windows 的可执行文件后缀。
 
 ### 方案 C：做 npm / Bun 包发布，再额外维护 release
 
@@ -108,8 +108,8 @@
 
 构建脚本负责：
 
-- 为 `linux-x64`、`darwin-arm64`、`darwin-x64` 生成 standalone executable。
-- 每个平台输出一个独立目录，目录内包含 `agent-switch` 和 `as`。
+- 为 `linux-x64`、`darwin-arm64`、`darwin-x64`、`windows-x64` 生成 standalone executable。
+- 每个平台输出一个独立目录，目录内包含 `agent-switch` 和 `as`；Windows 目标输出 `agent-switch.exe` 和 `as.exe`。
 - 将目录打包成 `tar.gz`。
 - 对所有产物生成 `SHA256SUMS`。
 
@@ -118,6 +118,7 @@
 - `agent-switch-linux-x64.tar.gz`
 - `agent-switch-darwin-arm64.tar.gz`
 - `agent-switch-darwin-x64.tar.gz`
+- `agent-switch-windows-x64.tar.gz`
 - `SHA256SUMS`
 
 ### 发布阶段
@@ -133,7 +134,7 @@
 
 `scripts/build-release.ts` 只做构建和打包，不直接负责发布。它应当：
 
-- 接收构建目标列表和输出目录。
+- 接收单个平台和输出目录。
 - 调用 Bun 的 `--compile` 能力构建可执行文件。
 - 为每个平台复制 `as`。
 - 打包生成 `tar.gz`。
@@ -159,7 +160,6 @@ README 需要补一段“如何从 Release 安装”：
 本次不做这些事：
 
 - 不发布到 npm registry。
-- 不做 Windows 二进制。
 - 不做代码签名或 notarization。
 - 不做自动打 tag 或自动发版号。
 - 不改现有 CLI 运行时行为。
@@ -170,6 +170,6 @@ README 需要补一段“如何从 Release 安装”：
 
 1. 推送 `v*.*.*` tag 后，GitHub Actions 会自动完成校验、构建、打包和 Release 上传。
 2. 手动触发 workflow 可以重跑同一套发布流程。
-3. Release 页面能下载到三个平台的二进制压缩包和 `SHA256SUMS`。
+3. Release 页面能下载到四个平台的二进制压缩包和 `SHA256SUMS`。
 4. 用户只需要解压就能直接运行 `agent-switch` 或 `as`，不需要安装 Bun。
 5. 仓库现有本地构建路径仍然保留，可继续用于开发和测试。
