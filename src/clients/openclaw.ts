@@ -2,6 +2,14 @@ import { join } from "node:path";
 import { BaseClientAdapter } from "./base";
 import type { ApplyClientConfigInput, ClientCurrentState, ClientId, PatchPlan } from "./types";
 import { parseJsoncObject, readTextIfExists, recordAt, stringifyJson } from "./utils";
+import { normalizeProviderType, type ModelProfile, type ProviderProfile, type ProviderType } from "../config/schema";
+
+type OpenClawProviderApi =
+  | "openai-completions"
+  | "openai-responses"
+  | "anthropic-messages"
+  | "google-generative-ai"
+  | "ollama";
 
 export class OpenClawAdapter extends BaseClientAdapter {
   id: ClientId = "openclaw";
@@ -20,6 +28,9 @@ export class OpenClawAdapter extends BaseClientAdapter {
   }
 
   async planApply(input: ApplyClientConfigInput): Promise<PatchPlan> {
+    if (!input.provider.baseUrl) {
+      throw new Error(`OpenClaw requires a baseUrl for provider ${input.provider.id}`);
+    }
     const before = await readTextIfExists(this.configPath);
     const config = parseJsoncObject(before);
     const agents = recordAt(config, "agents");
@@ -30,9 +41,9 @@ export class OpenClawAdapter extends BaseClientAdapter {
     const providers = recordAt(models, "providers");
     providers[input.provider.id] = {
       baseUrl: input.provider.baseUrl,
-      apiKey: input.provider.apiKeyEnv ? `$${input.provider.apiKeyEnv}` : undefined,
-      api: input.provider.type,
-      models: input.provider.models.map((item) => item.id),
+      apiKey: openClawApiKey(input.provider),
+      api: openClawApi(input.provider.type),
+      models: input.provider.models.map(openClawModel),
     };
     const file = before === undefined
       ? { path: this.configPath, after: stringifyJson(config) }
@@ -54,4 +65,45 @@ export class OpenClawAdapter extends BaseClientAdapter {
       configPath: this.configPath,
     };
   }
+}
+
+function openClawApi(type: ProviderType): OpenClawProviderApi {
+  switch (normalizeProviderType(type)) {
+    case "anthropic":
+      return "anthropic-messages";
+    case "gemini":
+      return "google-generative-ai";
+    case "ollama":
+      return "ollama";
+    case "openai-responses":
+      return "openai-responses";
+    case "openai-chat-compatible":
+    case "openrouter":
+    case "dashscope":
+    case "deepseek":
+    case "moonshot":
+    case "siliconflow":
+    case "lmstudio":
+      return "openai-completions";
+    case "custom":
+      throw new Error("OpenClaw requires a concrete provider type; use openai-chat-compatible, anthropic, gemini, or ollama");
+    default:
+      throw new Error(`Unsupported OpenClaw provider type: ${type}`);
+  }
+}
+
+function openClawApiKey(provider: ProviderProfile): string | { source: "env"; provider: "default"; id: string } | undefined {
+  const envName = provider.apiKeyEnv ?? (provider.apiKey?.kind === "env" ? provider.apiKey.name : undefined);
+  if (envName) return { source: "env", provider: "default", id: envName };
+  if (provider.apiKey?.kind === "inline") return provider.apiKey.value;
+  return undefined;
+}
+
+function openClawModel(model: ModelProfile): Record<string, unknown> {
+  return {
+    id: model.id,
+    name: model.name ?? model.id,
+    contextWindow: model.contextWindow,
+    maxTokens: model.maxTokens,
+  };
 }

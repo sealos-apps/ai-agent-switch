@@ -6,18 +6,16 @@ import { tmpdir } from "node:os";
 const cliPath = join(import.meta.dir, "..", "src", "cli", "main.ts");
 
 describe("CLI integration", () => {
-  test("provider model add/remove and client disable/enable work through CLI", async () => {
+  test("provider model add/remove work through CLI without client switch config", async () => {
     const home = await mkdtemp(join(tmpdir(), "agent-switch-cli-"));
     try {
       await run(home, "provider", "add", "--id", "openrouter", "--name", "OpenRouter", "--type", "openai-compatible", "--base-url", "https://openrouter.ai/api/v1", "--model", "a");
       await run(home, "provider", "model-add", "openrouter", "b");
       await run(home, "provider", "model-remove", "openrouter", "a");
-      await run(home, "client", "disable", "qwen");
-      await run(home, "client", "enable", "qwen");
 
       const config = JSON.parse(stripJsonc(await readFile(join(home, ".agent-switch/config.jsonc"), "utf8")));
       expect(config.providers.openrouter.models.map((model: { id: string }) => model.id)).toEqual(["b"]);
-      expect(config.clients.qwen.enabled).toBe(true);
+      expect(config.clients).toEqual({});
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -47,6 +45,26 @@ describe("CLI integration", () => {
 
       expect(output).toContain("primary openrouter/a");
       expect(output).toContain("fallback 1 openrouter/b");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("client use-proxy configures one client for the local agent-switch proxy", async () => {
+    const home = await mkdtemp(join(tmpdir(), "agent-switch-cli-client-proxy-"));
+    try {
+      const preview = await run(home, "client", "use-proxy", "qwen", "--dry-run", "--json");
+      const planned = JSON.parse(preview) as { applied: boolean; requiresConfirmation: boolean; plan: { summary: string } };
+      expect(planned.applied).toBe(false);
+      expect(planned.requiresConfirmation).toBe(true);
+      expect(planned.plan.summary).toContain("agent-switch-proxy/agent-switch/default");
+
+      await run(home, "client", "use-proxy", "qwen", "-y");
+
+      const settings = JSON.parse(await readFile(join(home, ".qwen/settings.json"), "utf8"));
+      expect(settings.security.auth.selectedType).toBe("agent-switch-proxy");
+      expect(settings.model.name).toBe("agent-switch/default");
+      expect(settings.modelProviders["agent-switch-proxy"].baseUrl).toBe("http://127.0.0.1:17890/v1");
     } finally {
       await rm(home, { recursive: true, force: true });
     }

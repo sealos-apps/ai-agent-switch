@@ -5,7 +5,7 @@
 `agent-switch` 内部必须区分五个概念：
 
 - `Client`：外部 AI 编程客户端，例如 Codex、Qwen、Gemini、Hermes。
-- `Provider`：模型供应商和 API endpoint，例如 OpenRouter、DeepSeek、OpenAI-compatible。
+- `Provider`：模型供应商和 API endpoint，例如 OpenRouter、DeepSeek、OpenAI Responses、OpenAI Chat Completions 兼容 endpoint。
 - `Model`：具体模型 ID，允许包含斜杠，例如 `qwen/qwen3-coder`。
 - `ClientAdapter`：把通用 provider/model 写入客户端原生配置。
 - `ProxyRuntime`：可选的本地 HTTP 代理，负责重试和 failover。
@@ -56,12 +56,39 @@ CLI 的面向脚本接口使用 JSON 输出，不引入数据库或后台 API：
 
 - `status --json`
 - `doctor --json`
-- `client list/detect --json`
+- `client list/detect/show/use-proxy --json`
 - `provider list --json`
 - `route list --json`
 - `use --dry-run --json`
 - `use-all --dry-run --json`
 - `config schema`
+
+## TUI 分层
+
+TUI 是默认人工入口，但不直接复制业务逻辑。它分为三层：
+
+- `state`：纯状态机，负责主菜单、子菜单、选择位置、client detail 和消息。
+- `render`：纯渲染，输入 TUI state 和数据快照，输出 terminal frame string。
+- `controller`：唯一允许调用 `AgentSwitchApp` 的 TUI 副作用层。
+
+首页只展示核心管理对象：
+
+```text
+Clients
+Providers
+Models
+```
+
+主导航使用 `↑` / `↓`、`Enter`、`Esc`、`h` 和 `q`。TUI 可以调用 client detect/show/use-proxy、provider preset/custom/edit/test/remove、model add/remove/default 和 route 配置等现有应用服务，但 provider/model/client 的校验仍然由 `AgentSwitchApp` 和各 adapter 负责。
+
+## Provider Type
+
+OpenAI 相关 provider type 明确拆成两条 wire API：
+
+- `openai-responses`：OpenAI Responses API。
+- `openai-chat-compatible`：OpenAI Chat Completions 兼容接口。
+
+旧值 `openai` 和 `openai-compatible` 作为兼容别名继续接受，分别归一到 `openai-responses` 和 `openai-chat-compatible`。Codex 当前只接受 `wire_api = "responses"`，所以 Codex adapter 会把可接入 Codex 的 OpenAI 相关 provider 写成 responses wire API；其他客户端按各自原生配置映射。
 
 ## Provider Presets
 
@@ -69,7 +96,7 @@ Provider preset 是内置的常见供应商模板，用来减少手写 baseUrl/t
 
 Preset 只生成普通 `ProviderProfile`，不会引入隐藏状态；用户仍然可以用 `provider edit`、`provider model-add` 和 JSONC 手动修改。
 
-`agent-switch-proxy` preset 是特殊的本地代理模板，但仍然落盘为普通 OpenAI-compatible provider：
+`agent-switch-proxy` preset 是特殊的本地代理模板，但仍然落盘为普通 `openai-chat-compatible` provider：
 
 ```text
 baseUrl: http://127.0.0.1:17890/v1

@@ -41,4 +41,36 @@ describe("proxy forwarding", () => {
     expect(seenAuthorization).toBe("Bearer secret");
     expect(seenProviderHeader).toBe("yes");
   });
+
+  test("does not forward incoming host header to upstream provider", async () => {
+    const provider: ProviderProfile = {
+      id: "upstream",
+      name: "Upstream",
+      type: "openai-responses",
+      baseUrl: "https://api.example.com/v1",
+      models: [{ id: "model" }],
+    };
+    let seenHost: string | null = null;
+
+    const response = await forwardProviderRequest(
+      provider,
+      new Request("http://127.0.0.1:17890/v1/responses", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          host: "127.0.0.1:17890",
+        },
+        body: JSON.stringify({ model: "client-model", input: "hi" }),
+      }),
+      undefined,
+      async (_url, init) => {
+        seenHost = new Headers(init.headers).get("host");
+        return new Response("ok");
+      },
+      "model",
+    );
+
+    expect(await response.text()).toBe("ok");
+    expect(seenHost).toBeNull();
+  });
 });

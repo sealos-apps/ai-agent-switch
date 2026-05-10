@@ -55,7 +55,32 @@ describe("client adapters", () => {
       expect(text).toContain('model_provider = "openrouter"');
       expect(text).toContain("[model_providers.openrouter]");
       expect(text).toContain('env_key = "OPENROUTER_API_KEY"');
+      expect(text).toContain('wire_api = "responses"');
       expect(text).toContain('approval_policy = "never"');
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("codex adapter writes responses wire api for explicit OpenAI Responses providers", async () => {
+    const home = await mkdtemp(join(tmpdir(), "agent-switch-codex-openai-"));
+    try {
+      await mkdir(join(home, ".codex"), { recursive: true });
+      const codex = createClientAdapters({ homeDir: home, cwd: home }).get("codex")!;
+      const openaiResponses: ProviderProfile = {
+        id: "openai",
+        name: "OpenAI",
+        type: "openai-responses",
+        baseUrl: "https://api.openai.com/v1",
+        apiKeyEnv: "OPENAI_API_KEY",
+        models: [{ id: "gpt-5.1" }],
+      };
+
+      await codex.apply(await codex.planApply({ provider: openaiResponses, modelId: "gpt-5.1" }));
+
+      const text = await readFile(join(home, ".codex/config.toml"), "utf8");
+      expect(text).toContain('model_provider = "openai"');
+      expect(text).toContain('wire_api = "responses"');
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -74,10 +99,38 @@ describe("client adapters", () => {
 
       const text = await readFile(join(home, ".hermes/config.yaml"), "utf8");
       expect(text).toContain("theme: dark");
-      expect(text).toContain("current_provider: openrouter");
-      expect(text).toContain("current_model: qwen/qwen3-coder");
+      expect(text).toContain("provider: openrouter");
+      expect(text).toContain("default: qwen/qwen3-coder");
       expect(text).toContain("base_url: https://openrouter.ai/api/v1");
-      expect(text).toContain("api_key_env: OPENROUTER_API_KEY");
+      expect(text).toContain("key_env: OPENROUTER_API_KEY");
+      expect(text).toContain("transport: openai_chat");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("hermes adapter strips /v1 from anthropic base URL", async () => {
+    const home = await mkdtemp(join(tmpdir(), "agent-switch-hermes-anthropic-"));
+    try {
+      const adapters = createClientAdapters({ homeDir: home, cwd: home });
+      const hermes = adapters.get("hermes")!;
+      await hermes.apply(await hermes.planApply({
+        provider: {
+          ...provider,
+          id: "aiproxy-anthropic",
+          name: "Ai Proxy Anthropic",
+          type: "anthropic",
+          baseUrl: "https://aiproxy.hzh.sealos.run/v1",
+          models: [{ id: "deepseek-v4-pro" }],
+        },
+        modelId: "deepseek-v4-pro",
+      }));
+
+      const text = await readFile(join(home, ".hermes/config.yaml"), "utf8");
+      expect(text).toContain("provider: aiproxy-anthropic");
+      expect(text).toContain("default: deepseek-v4-pro");
+      expect(text).toContain("base_url: https://aiproxy.hzh.sealos.run");
+      expect(text).toContain("transport: anthropic_messages");
     } finally {
       await rm(home, { recursive: true, force: true });
     }

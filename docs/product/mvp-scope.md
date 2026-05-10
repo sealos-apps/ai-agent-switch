@@ -9,7 +9,12 @@
 ## 第一版必须完成
 
 - 裸命令 `agent-switch` / `as` 默认进入 TUI。
-- CLI 支持 provider 管理、client 检测、配置校验、模型切换、doctor、proxy 状态。
+- TUI 首页使用主菜单：`Clients`、`Providers`、`Models`。
+- TUI 主导航使用方向键，`h` 打开帮助，`Esc` 返回上一级。
+- TUI 支持从 provider preset 或自定义 provider 初始化配置；Clients 首页只展示可配置 client 列表，进入某个 client 后才读取当前配置，并可选择继续使用当前配置或接入 agent-switch proxy。
+- TUI 自定义 provider 要区分 `openai-responses` 和 `openai-chat-compatible`，不能把 OpenAI 两种 wire API 混成一个类型。
+- TUI 支持 client 检测/查看，provider 编辑/测试/删除，以及 model 添加/删除/default/route 基础管理。
+- CLI 支持 provider 管理、client 列表/检测/查看、单个 client 接入 agent-switch proxy、配置校验、模型切换、doctor、proxy 状态。
 - 支持 `-y` / `--yes`，只跳过确认，不跳过硬校验。
 - `agent-switch` 自身配置使用 JSONC。
 - 适配客户端原生配置：JSON、JSONC、TOML、YAML。
@@ -20,7 +25,6 @@
 - 支持 provider 下模型增删。
 - 支持 provider 默认模型设置。
 - 支持 `model list` 平铺查看所有可切换模型目标。
-- 支持 client enable/disable。
 - 支持代理默认 route/fallback 链。
 - 代理按 route 改写 OpenAI-compatible 请求体 `model`。
 - 支持代理 `/health` 健康检查。
@@ -29,7 +33,7 @@
 - 支持 `--json` 脚本化输出。
 - `config validate` 包含 schema 校验和跨字段语义校验。
 - 支持 `use --dry-run` 预演。
-- 支持 `use-all` 批量切换所有启用客户端。
+- 保留 `use` / `use-all` 作为高级直接写客户端原生 provider/model 的 CLI 路径。
 - 支持 `config schema` 和 shell completion。
 - 支持常见 provider presets，降低接入成本。
 - 支持 `agent-switch-proxy` 本地代理 preset。

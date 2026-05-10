@@ -10,23 +10,21 @@ describe("CLI use-all", () => {
     const home = await mkdtemp(join(tmpdir(), "agent-switch-cli-use-all-"));
     try {
       await run(home, "provider", "add", "--id", "openrouter", "--name", "OpenRouter", "--type", "openai-compatible", "--base-url", "https://openrouter.ai/api/v1", "--model", "qwen/qwen3-coder");
-      await run(home, "client", "disable", "openclaw");
       const output = await run(home, "use-all", "openrouter/qwen/qwen3-coder", "--dry-run", "--json");
       const parsed = JSON.parse(output) as { applied: boolean; results: { clientId: string; status: string }[] };
 
       expect(parsed.applied).toBe(false);
       expect(parsed.results.some((item) => item.clientId === "qwen" && item.status === "planned")).toBe(true);
-      expect(parsed.results.some((item) => item.clientId === "openclaw" && item.status === "skipped")).toBe(true);
+      expect(parsed.results.some((item) => item.status === "skipped")).toBe(false);
     } finally {
       await rm(home, { recursive: true, force: true });
     }
   });
 
-  test("use-all -y applies enabled client configs", async () => {
+  test("use-all -y applies supported client configs", async () => {
     const home = await mkdtemp(join(tmpdir(), "agent-switch-cli-use-all-apply-"));
     try {
       await run(home, "provider", "add", "--id", "openrouter", "--name", "OpenRouter", "--type", "openai-compatible", "--base-url", "https://openrouter.ai/api/v1", "--model", "qwen/qwen3-coder");
-      await run(home, "client", "disable", "openclaw");
       await run(home, "use-all", "openrouter/qwen/qwen3-coder", "-y");
 
       const qwen = JSON.parse(await readFile(join(home, ".qwen/settings.json"), "utf8"));

@@ -143,6 +143,7 @@ export async function forwardProviderRequest(
   upstream.search = incomingUrl.search;
 
   const headers = new Headers(request.headers);
+  headers.delete("host");
   const key = resolveApiKey(provider);
   if (key && !headers.has("authorization")) {
     headers.set("authorization", `Bearer ${key}`);

@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 export const providerTypes = [
+  "openai-responses",
+  "openai-chat-compatible",
   "openai",
   "anthropic",
   "gemini",
@@ -16,6 +18,44 @@ export const providerTypes = [
 ] as const;
 
 export type ProviderType = (typeof providerTypes)[number];
+
+export const selectableProviderTypes = [
+  "openai-responses",
+  "openai-chat-compatible",
+  "anthropic",
+  "gemini",
+  "openrouter",
+  "dashscope",
+  "deepseek",
+  "moonshot",
+  "siliconflow",
+  "ollama",
+  "lmstudio",
+  "custom",
+] as const satisfies readonly ProviderType[];
+
+export const providerTypeLabels: Record<ProviderType, string> = {
+  "openai-responses": "OpenAI Responses API",
+  "openai-chat-compatible": "OpenAI Chat Completions compatible",
+  openai: "OpenAI Responses API (legacy alias)",
+  anthropic: "Anthropic native API",
+  gemini: "Gemini native API",
+  "openai-compatible": "OpenAI Chat Completions compatible (legacy alias)",
+  openrouter: "OpenRouter provider",
+  dashscope: "DashScope provider",
+  deepseek: "DeepSeek provider",
+  moonshot: "Moonshot/Kimi provider",
+  siliconflow: "SiliconFlow provider",
+  ollama: "Ollama local provider",
+  lmstudio: "LM Studio local provider",
+  custom: "Custom provider",
+};
+
+export function normalizeProviderType(type: ProviderType): ProviderType {
+  if (type === "openai") return "openai-responses";
+  if (type === "openai-compatible") return "openai-chat-compatible";
+  return type;
+}
 
 export type SecretRef =
   | { kind: "env"; name: string }
@@ -43,7 +83,7 @@ export type ProviderProfile = {
 };
 
 export type ClientProfile = {
-  enabled: boolean;
+  enabled?: boolean | undefined;
   configPath?: string | undefined;
 };
 
@@ -136,7 +176,7 @@ export const agentSwitchConfigSchema: z.ZodType<AgentSwitchConfig> = z.object({
   version: z.literal(1),
   clients: z.record(
     z.object({
-      enabled: z.boolean(),
+      enabled: z.boolean().optional(),
       configPath: z.string().min(1).optional(),
     }),
   ),
@@ -164,16 +204,7 @@ export const agentSwitchConfigSchema: z.ZodType<AgentSwitchConfig> = z.object({
 export function createDefaultConfig(): AgentSwitchConfig {
   return {
     version: 1,
-    clients: {
-      codex: { enabled: true },
-      gemini: { enabled: true },
-      qwen: { enabled: true },
-      openclaw: { enabled: true },
-      hermes: { enabled: true },
-      crush: { enabled: true },
-      opencode: { enabled: true },
-      "claude-code": { enabled: true },
-    },
+    clients: {},
     providers: {},
     routes: {},
     proxy: {

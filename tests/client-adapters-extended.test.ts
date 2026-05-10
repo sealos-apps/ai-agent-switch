@@ -47,7 +47,35 @@ describe("extended client adapters", () => {
       const parsed = JSON.parse(await readFile(join(home, ".openclaw/openclaw.json"), "utf8"));
       expect(parsed.agents.defaults.agentRuntime.id).toBe("codex");
       expect(parsed.agents.defaults.model.primary).toBe("openrouter/qwen/qwen3-coder");
-      expect(parsed.models.providers.openrouter.apiKey).toBe("$OPENROUTER_API_KEY");
+      expect(parsed.models.providers.openrouter.api).toBe("openai-completions");
+      expect(parsed.models.providers.openrouter.apiKey).toEqual({ source: "env", provider: "default", id: "OPENROUTER_API_KEY" });
+      expect(parsed.models.providers.openrouter.models).toEqual([{ id: "qwen/qwen3-coder", name: "qwen/qwen3-coder" }]);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("openclaw adapter maps Anthropic providers to messages transport", async () => {
+    const home = await mkdtemp(join(tmpdir(), "agent-switch-openclaw-anthropic-"));
+    try {
+      await mkdir(join(home, ".openclaw"), { recursive: true });
+      const openclaw = createClientAdapters({ homeDir: home, cwd: home }).get("openclaw")!;
+      const anthropicProvider: ProviderProfile = {
+        id: "aiproxy-anthropic",
+        name: "Ai Proxy Anthropic",
+        type: "anthropic",
+        baseUrl: "https://aiproxy.hzh.sealos.run/v1",
+        apiKeyEnv: "AIPROXY_API_KEY",
+        models: [{ id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" }],
+      };
+
+      await openclaw.apply(await openclaw.planApply({ provider: anthropicProvider, modelId: "deepseek-v4-pro" }));
+
+      const parsed = JSON.parse(await readFile(join(home, ".openclaw/openclaw.json"), "utf8"));
+      expect(parsed.agents.defaults.model.primary).toBe("aiproxy-anthropic/deepseek-v4-pro");
+      expect(parsed.models.providers["aiproxy-anthropic"].api).toBe("anthropic-messages");
+      expect(parsed.models.providers["aiproxy-anthropic"].apiKey).toEqual({ source: "env", provider: "default", id: "AIPROXY_API_KEY" });
+      expect(parsed.models.providers["aiproxy-anthropic"].models).toEqual([{ id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" }]);
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -65,6 +93,25 @@ describe("extended client adapters", () => {
       const parsed = JSON.parse(await readFile(join(home, ".config/crush/crush.json"), "utf8"));
       expect(parsed.session_dir).toBe("keep");
       expect(parsed.models.large).toEqual({ provider: "openrouter", model: "qwen/qwen3-coder" });
+      expect(parsed.providers.openrouter.type).toBe("openai-compat");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("crush adapter maps explicit OpenAI Chat-compatible providers to openai-compat", async () => {
+    const home = await mkdtemp(join(tmpdir(), "agent-switch-crush-chat-"));
+    try {
+      await mkdir(join(home, ".config/crush"), { recursive: true });
+      const crush = createClientAdapters({ homeDir: home, cwd: home }).get("crush")!;
+      const chatProvider: ProviderProfile = {
+        ...provider,
+        type: "openai-chat-compatible",
+      };
+
+      await crush.apply(await crush.planApply({ provider: chatProvider, modelId: "qwen/qwen3-coder" }));
+
+      const parsed = JSON.parse(await readFile(join(home, ".config/crush/crush.json"), "utf8"));
       expect(parsed.providers.openrouter.type).toBe("openai-compat");
     } finally {
       await rm(home, { recursive: true, force: true });

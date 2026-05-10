@@ -19,7 +19,7 @@ describe("provider presets", () => {
     const preset = getProviderPreset("openrouter");
     expect(preset?.toProvider({ apiKeyEnv: "OPENROUTER_API_KEY" })).toMatchObject({
       id: "openrouter",
-      type: "openai-compatible",
+      type: "openai-chat-compatible",
       baseUrl: "https://openrouter.ai/api/v1",
       apiKeyEnv: "OPENROUTER_API_KEY",
     });
@@ -30,7 +30,7 @@ describe("provider presets", () => {
     expect(preset?.toProvider()).toMatchObject({
       id: "agent-switch-proxy",
       name: "agent-switch Proxy",
-      type: "openai-compatible",
+      type: "openai-chat-compatible",
       baseUrl: "http://127.0.0.1:17890/v1",
       models: [{ id: "agent-switch/default" }],
       defaultModel: "agent-switch/default",

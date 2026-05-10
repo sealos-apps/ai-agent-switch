@@ -24,6 +24,11 @@ export type UseClientInput = {
   yes: boolean;
 };
 
+export type UseClientProxyInput = {
+  clientId: ClientId;
+  yes: boolean;
+};
+
 export type UseClientResult = {
   applied: boolean;
   requiresConfirmation: boolean;
@@ -184,14 +189,6 @@ export class AgentSwitchApp {
     return nextProvider!;
   }
 
-  async setClientEnabled(clientId: ClientId, enabled: boolean): Promise<void> {
-    if (!this.adapters.has(clientId)) throw new Error(`Client not supported: ${clientId}`);
-    await this.store.update((config) => {
-      config.clients[clientId] = { ...(config.clients[clientId] ?? {}), enabled };
-      return config;
-    });
-  }
-
   async setDefaultRoute(target: string): Promise<RouteCandidate[]> {
     const candidate = await this.resolveRouteCandidate(target);
     const config = await this.store.update((draft) => {
@@ -287,18 +284,28 @@ export class AgentSwitchApp {
     return config.proxy;
   }
 
-  async listClients(): Promise<{ id: ClientId; displayName: string; configPath: string; enabled: boolean }[]> {
-    const config = await this.store.load();
+  async listClients(): Promise<{ id: ClientId; displayName: string; configPath: string }[]> {
     return [...this.adapters.values()].map((adapter) => ({
       id: adapter.id,
       displayName: adapter.displayName,
       configPath: adapter.configPath,
-      enabled: config.clients[adapter.id]?.enabled ?? true,
     }));
   }
 
   async detectClients(): Promise<Awaited<ReturnType<ClientAdapter["detect"]>>[]> {
     return Promise.all([...this.adapters.values()].map((adapter) => adapter.detect()));
+  }
+
+  async detectClient(clientId: ClientId): Promise<Awaited<ReturnType<ClientAdapter["detect"]>>> {
+    const adapter = this.adapters.get(clientId);
+    if (!adapter) throw new Error(`Client not supported: ${clientId}`);
+    return adapter.detect();
+  }
+
+  async getClientCurrent(clientId: ClientId): Promise<ClientCurrentState> {
+    const adapter = this.adapters.get(clientId);
+    if (!adapter) throw new Error(`Client not supported: ${clientId}`);
+    return adapter.getCurrent();
   }
 
   async useClient(input: UseClientInput): Promise<UseClientResult> {
@@ -311,9 +318,6 @@ export class AgentSwitchApp {
 
     const adapter = this.adapters.get(input.clientId);
     if (!adapter) throw new Error(`Client not supported: ${input.clientId}`);
-    if (config.clients[input.clientId]?.enabled === false) {
-      throw new Error(`Client disabled: ${input.clientId}`);
-    }
     const validation = await adapter.validate();
     if (!validation.ok && existsSync(adapter.configPath)) {
       throw new Error(`Client config is invalid: ${validation.issues.join("; ")}`);
@@ -337,6 +341,43 @@ export class AgentSwitchApp {
     return { applied: true, requiresConfirmation: false, plan };
   }
 
+  async useClientProxy(input: UseClientProxyInput): Promise<UseClientResult> {
+    const config = await this.store.load();
+    agentSwitchConfigSchema.parse(config);
+    const adapter = this.adapters.get(input.clientId);
+    if (!adapter) throw new Error(`Client not supported: ${input.clientId}`);
+    const validation = await adapter.validate();
+    if (!validation.ok && existsSync(adapter.configPath)) {
+      throw new Error(`Client config is invalid: ${validation.issues.join("; ")}`);
+    }
+
+    const modelId = "agent-switch/default";
+    const provider: ProviderProfile = {
+      id: "agent-switch-proxy",
+      name: "agent-switch Proxy",
+      type: "openai-chat-compatible",
+      baseUrl: proxyBaseUrl(config.proxy.host, config.proxy.port),
+      models: [{ id: modelId }],
+      defaultModel: modelId,
+    };
+    const plan = await adapter.planApply({ provider, modelId });
+    if (!input.yes) {
+      return { applied: false, requiresConfirmation: true, plan };
+    }
+
+    await adapter.apply(plan);
+    await this.stateStore.update((state) => {
+      state.lastSwitch = {
+        clientId: input.clientId,
+        providerId: provider.id,
+        modelId,
+        at: new Date().toISOString(),
+      };
+      return state;
+    });
+    return { applied: true, requiresConfirmation: false, plan };
+  }
+
   async useAllClients(input: UseAllClientsInput): Promise<UseAllClientsResult> {
     const config = await this.store.load();
     agentSwitchConfigSchema.parse(config);
@@ -347,11 +388,6 @@ export class AgentSwitchApp {
 
     const results: UseAllClientItem[] = [];
     for (const adapter of this.adapters.values()) {
-      if (config.clients[adapter.id]?.enabled === false) {
-        results.push({ clientId: adapter.id, status: "skipped", reason: "client disabled" });
-        continue;
-      }
-
       try {
         const validation = await adapter.validate();
         if (!validation.ok && existsSync(adapter.configPath)) {
@@ -429,4 +465,9 @@ export class AgentSwitchApp {
       checks,
     };
   }
+}
+
+function proxyBaseUrl(host: string, port: number): string {
+  const requestHost = host === "0.0.0.0" ? "127.0.0.1" : host;
+  return `http://${requestHost}:${port}/v1`;
 }

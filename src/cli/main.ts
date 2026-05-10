@@ -2,7 +2,7 @@
 import { cac } from "cac";
 import pc from "picocolors";
 import { AgentSwitchApp } from "../core/app";
-import { providerTypes, type ProviderProfile } from "../config/schema";
+import { providerTypeLabels, selectableProviderTypes, type ProviderProfile } from "../config/schema";
 import { parseClientId, printDoctor, printPatchPlan, printProviders, printStatus, printValidation } from "../shared/output";
 import { confirm } from "../shared/prompt";
 import { runTui } from "../tui/app";
@@ -68,8 +68,10 @@ cli.command("config <action>", "配置命令：path / validate / schema")
   throw new Error(`Unsupported config action: ${action}`);
 });
 
-cli.command("client <action> [client]", "客户端命令：list / detect / show")
+cli.command("client <action> [client]", "客户端命令：list / detect / show / use-proxy")
   .option("--json", "输出 JSON")
+  .option("--dry-run", "只输出变更计划，不写入客户端配置")
+  .option("-y, --yes", "跳过交互确认，但不跳过硬校验")
   .action(async (action: string, client: string | undefined, options) => {
     if (action === "list") {
       const clients = await app.listClients();
@@ -78,11 +80,20 @@ cli.command("client <action> [client]", "客户端命令：list / detect / show"
         return;
       }
       for (const item of clients) {
-        console.log(`${pc.cyan(item.id)} ${item.enabled ? pc.green("enabled") : pc.yellow("disabled")} ${pc.dim(item.configPath)}`);
+        console.log(`${pc.cyan(item.id)} ${pc.dim(item.configPath)}`);
       }
       return;
     }
     if (action === "detect") {
+      if (client) {
+        const detection = await app.detectClient(parseClientId(client));
+        if (options.json) {
+          console.log(JSON.stringify(detection, null, 2));
+          return;
+        }
+        console.log(`${detection.configExists ? pc.green("OK") : pc.yellow("MISS")} ${client} ${pc.dim(detection.configPath)}`);
+        return;
+      }
       const clients = await app.listClients();
       const detections = await app.detectClients();
       if (options.json) {
@@ -98,23 +109,32 @@ cli.command("client <action> [client]", "客户端命令：list / detect / show"
     if (action === "show") {
       if (!client) throw new Error("Missing client");
       const id = parseClientId(client);
-      const adapter = app.adapters.get(id);
-      if (!adapter) throw new Error(`Unsupported client: ${client}`);
-      console.log(JSON.stringify(await adapter.getCurrent(), null, 2));
+      console.log(JSON.stringify(await app.getClientCurrent(id), null, 2));
       return;
     }
-    if (action === "enable") {
+    if (action === "use-proxy") {
       if (!client) throw new Error("Missing client");
-      const id = parseClientId(client);
-      await app.setClientEnabled(id, true);
-      console.log(`${pc.green("OK")} client ${id} enabled`);
-      return;
-    }
-    if (action === "disable") {
-      if (!client) throw new Error("Missing client");
-      const id = parseClientId(client);
-      await app.setClientEnabled(id, false);
-      console.log(`${pc.green("OK")} client ${id} disabled`);
+      const clientId = parseClientId(client);
+      const result = await app.useClientProxy({ clientId, yes: Boolean(options.yes) && !options.dryRun });
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      printPatchPlan(result.plan);
+      if (options.dryRun) {
+        console.log(pc.yellow("dry-run：未写入客户端配置"));
+        return;
+      }
+      if (result.requiresConfirmation) {
+        if (!(await confirm("应用以上配置变更？"))) {
+          console.log(pc.yellow("已取消，未写入客户端配置"));
+          return;
+        }
+        await app.useClientProxy({ clientId, yes: true });
+        console.log(pc.green("OK 已应用"));
+        return;
+      }
+      console.log(pc.green("OK 已应用"));
       return;
     }
     throw new Error(`Unsupported client action: ${action}`);
@@ -124,7 +144,7 @@ cli
   .command("provider <action> [id] [value]", "provider 命令：list / show / add / edit / remove / test / model-add / model-remove")
   .option("--id <id>", "provider id")
   .option("--name <name>", "显示名称")
-  .option("--type <type>", `provider 类型：${providerTypes.join(", ")}`)
+  .option("--type <type>", `provider 类型：${selectableProviderTypes.map((type) => `${type} (${providerTypeLabels[type]})`).join(", ")}`)
   .option("--base-url <url>", "OpenAI-compatible base URL")
   .option("--api-key-env <name>", "API key 环境变量名")
   .option("--api-key <key>", "内联 API key，不推荐")
@@ -256,7 +276,7 @@ cli.command("model <action>", "模型命令：list")
   });
 
 cli
-  .command("use <client> <target>", "切换客户端 provider/model，例如 qwen openrouter/qwen/qwen3-coder")
+  .command("use <client> <target>", "高级：直接写入客户端原生 provider/model，例如 qwen openrouter/qwen/qwen3-coder")
   .option("--dry-run", "只输出变更计划，不写入客户端配置")
   .option("--json", "输出 JSON")
   .option("-y, --yes", "跳过交互确认，但不跳过硬校验")
@@ -276,7 +296,7 @@ cli
         console.log(pc.yellow("已取消，未写入客户端配置"));
         return;
       }
-      await app.applyPlan(result.plan);
+      await app.useClient({ clientId: parseClientId(client), target, yes: true });
       console.log(pc.green("OK 已应用"));
       return;
     }
@@ -284,7 +304,7 @@ cli
   });
 
 cli
-  .command("use-all <target>", "批量切换所有启用客户端到 provider/model")
+  .command("use-all <target>", "高级：批量直接写入所有支持客户端的原生 provider/model")
   .option("--dry-run", "只输出变更计划，不写入客户端配置")
   .option("--json", "输出 JSON")
   .option("-y, --yes", "跳过交互确认，但不跳过硬校验")
@@ -449,7 +469,7 @@ try {
 function providerFromOptions(options: Record<string, unknown>, current?: ProviderProfile): ProviderProfile {
   const id = stringOption(options.id, "id", current?.id);
   const name = stringOption(options.name, "name", current?.name ?? id);
-  const type = stringOption(options.type, "type", current?.type ?? "openai-compatible") as ProviderProfile["type"];
+  const type = stringOption(options.type, "type", current?.type ?? "openai-chat-compatible") as ProviderProfile["type"];
   const models = normalizeModels(options.model).map((model) => ({ id: model }));
   const provider: ProviderProfile = {
     id,

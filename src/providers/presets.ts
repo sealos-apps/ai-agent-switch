@@ -22,7 +22,7 @@ const presetDefinitions: PresetDefinition[] = [
   {
     id: "openrouter",
     name: "OpenRouter",
-    type: "openai-compatible",
+    type: "openai-chat-compatible",
     baseUrl: "https://openrouter.ai/api/v1",
     apiKeyEnv: "OPENROUTER_API_KEY",
     models: ["qwen/qwen3-coder", "anthropic/claude-sonnet-4.5", "openai/gpt-5.1"],
@@ -32,7 +32,7 @@ const presetDefinitions: PresetDefinition[] = [
   {
     id: "deepseek",
     name: "DeepSeek",
-    type: "openai-compatible",
+    type: "openai-chat-compatible",
     baseUrl: "https://api.deepseek.com/v1",
     apiKeyEnv: "DEEPSEEK_API_KEY",
     models: ["deepseek-chat", "deepseek-reasoner"],
@@ -42,7 +42,7 @@ const presetDefinitions: PresetDefinition[] = [
   {
     id: "dashscope",
     name: "DashScope",
-    type: "openai-compatible",
+    type: "openai-chat-compatible",
     baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     apiKeyEnv: "DASHSCOPE_API_KEY",
     models: ["qwen3-coder-plus", "qwen-plus", "qwen-max"],
@@ -52,7 +52,7 @@ const presetDefinitions: PresetDefinition[] = [
   {
     id: "moonshot",
     name: "Moonshot",
-    type: "openai-compatible",
+    type: "openai-chat-compatible",
     baseUrl: "https://api.moonshot.cn/v1",
     apiKeyEnv: "MOONSHOT_API_KEY",
     models: ["kimi-k2-0711-preview", "moonshot-v1-32k"],
@@ -62,7 +62,7 @@ const presetDefinitions: PresetDefinition[] = [
   {
     id: "siliconflow",
     name: "SiliconFlow",
-    type: "openai-compatible",
+    type: "openai-chat-compatible",
     baseUrl: "https://api.siliconflow.cn/v1",
     apiKeyEnv: "SILICONFLOW_API_KEY",
     models: ["Qwen/Qwen3-Coder-480B-A35B-Instruct", "deepseek-ai/DeepSeek-V3"],
@@ -72,7 +72,7 @@ const presetDefinitions: PresetDefinition[] = [
   {
     id: "openai",
     name: "OpenAI",
-    type: "openai",
+    type: "openai-responses",
     baseUrl: "https://api.openai.com/v1",
     apiKeyEnv: "OPENAI_API_KEY",
     models: ["gpt-5.1", "gpt-5-mini"],
@@ -120,7 +120,7 @@ const presetDefinitions: PresetDefinition[] = [
   {
     id: "agent-switch-proxy",
     name: "agent-switch Proxy",
-    type: "openai-compatible",
+    type: "openai-chat-compatible",
     baseUrl: "http://127.0.0.1:17890/v1",
     models: ["agent-switch/default"],
     defaultModel: "agent-switch/default",
