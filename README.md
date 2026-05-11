@@ -4,6 +4,27 @@
 
 它面向个人用户，提供 CLI 和默认 TUI，用来管理多个客户端的 provider / model 配置，并可选择开启本地代理、自动重试和自动切换。
 
+## 安装
+
+```bash
+npm install -g agent-switch
+```
+
+如果你只想在项目里使用，也可以直接安装为依赖：
+
+```bash
+npm install agent-switch
+```
+
+安装后直接运行：
+
+```bash
+agent-switch
+as
+```
+
+npm 会根据当前平台自动安装对应的二进制包，不需要手动下载 release 资产。
+
 ## 设计边界
 
 - 裸命令 `agent-switch` 或别名 `as` 默认进入 TUI。
