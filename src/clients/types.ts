@@ -8,6 +8,7 @@ export type ClientId =
   | "hermes"
   | "crush"
   | "opencode"
+  | "cowagent"
   | "claude-code";
 
 export type ClientDetection = {

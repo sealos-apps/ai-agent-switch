@@ -73,7 +73,7 @@ export function printPatchPlan(plan: PatchPlan): void {
 }
 
 export function parseClientId(value: string): ClientId {
-  const allowed = ["codex", "gemini", "qwen", "openclaw", "hermes", "crush", "opencode", "claude-code"] as const;
+  const allowed = ["codex", "gemini", "qwen", "openclaw", "hermes", "crush", "opencode", "cowagent", "claude-code"] as const;
   if (!allowed.includes(value as ClientId)) {
     throw new Error(`Unsupported client: ${value}`);
   }
