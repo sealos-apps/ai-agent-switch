@@ -6,6 +6,7 @@ import { OpenClawAdapter } from "./openclaw";
 import { HermesAdapter } from "./hermes";
 import { CrushAdapter } from "./crush";
 import { OpenCodeAdapter } from "./opencode";
+import { CowAgentAdapter } from "./cowagent";
 import { ClaudeCodeAdapter } from "./claude-code";
 import type { ClientAdapter, ClientAdapterOptions, ClientId } from "./types";
 
@@ -20,6 +21,7 @@ export function createClientAdapters(options: Partial<ClientAdapterOptions> = {}
     new HermesAdapter(homeDir),
     new CrushAdapter(homeDir, cwd),
     new OpenCodeAdapter(homeDir, cwd),
+    new CowAgentAdapter(homeDir),
     new ClaudeCodeAdapter(homeDir),
   ];
   return new Map(adapters.map((adapter) => [adapter.id, adapter]));

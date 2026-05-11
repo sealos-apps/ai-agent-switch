@@ -4,7 +4,7 @@
 
 `agent-switch` 是面向个人用户的 AI 编程客户端配置控制平面。
 
-它解决的问题是：用户同时使用 Codex、Gemini CLI、Qwen Code、OpenClaw、Hermes、Crush、OpenCode、Claude Code 等工具时，不想重复维护 provider、baseUrl、apiKey、model 和代理策略。
+它解决的问题是：用户同时使用 Codex、Gemini CLI、Qwen Code、OpenClaw、Hermes、Crush、OpenCode、CowAgent、Claude Code 等工具时，不想重复维护 provider、baseUrl、apiKey、model 和代理策略。
 
 ## 第一版必须完成
 
@@ -59,4 +59,5 @@
 | Hermes Agent | 写入 `~/.hermes/config.yaml`，密钥可分离到 `.env` |
 | Crush | 写入 `.crush.json` / `crush.json` / XDG 配置 |
 | OpenCode | 写入 `.opencode.json`，不碰 session DB |
+| CowAgent | 写入 `~/CowAgent/config.json` 的 `model`、`bot_type` 和 provider API 字段 |
 | Claude Code | 写入 `~/.claude/settings.json` 的 `agentSwitch` 命名空间 |

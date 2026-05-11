@@ -135,6 +135,151 @@ describe("extended client adapters", () => {
     }
   });
 
+  test("cowagent adapter patches global config without dropping unknown fields", async () => {
+    const home = await mkdtemp(join(tmpdir(), "agent-switch-cowagent-"));
+    try {
+      await mkdir(join(home, "CowAgent"), { recursive: true });
+      await writeFile(join(home, "CowAgent/config.json"), JSON.stringify({ channel_type: "feishu", agent: true }, null, 2));
+      const cowagent = createClientAdapters({ homeDir: home, cwd: home }).get("cowagent")!;
+      const compatibleProvider: ProviderProfile = {
+        id: "aiproxy-openai",
+        name: "Ai Proxy OpenAI",
+        type: "openai-chat-compatible",
+        baseUrl: "https://aiproxy.hzh.sealos.run/v1",
+        apiKey: { kind: "inline", value: "sk-test" },
+        models: [{ id: "deepseek-v4-flash" }],
+      };
+
+      await cowagent.apply(await cowagent.planApply({ provider: compatibleProvider, modelId: "deepseek-v4-flash" }));
+
+      const parsed = JSON.parse(await readFile(join(home, "CowAgent/config.json"), "utf8"));
+      expect(parsed.channel_type).toBe("feishu");
+      expect(parsed.agent).toBe(true);
+      expect(parsed.model).toBe("deepseek-v4-flash");
+      expect(parsed.bot_type).toBe("openai");
+      expect(parsed.open_ai_api_base).toBe("https://aiproxy.hzh.sealos.run/v1");
+      expect(parsed.open_ai_api_key).toBe("sk-test");
+      expect(parsed.agent_switch).toEqual({ provider: "aiproxy-openai", model: "deepseek-v4-flash" });
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("cowagent adapter maps Anthropic providers to claudeAPI", async () => {
+    const home = await mkdtemp(join(tmpdir(), "agent-switch-cowagent-anthropic-"));
+    try {
+      const cowagent = createClientAdapters({ homeDir: home, cwd: home }).get("cowagent")!;
+      const anthropicProvider: ProviderProfile = {
+        id: "aiproxy-anthropic",
+        name: "Ai Proxy Anthropic",
+        type: "anthropic",
+        baseUrl: "https://aiproxy.hzh.sealos.run/v1",
+        apiKeyEnv: "CLAUDE_API_KEY",
+        models: [{ id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" }],
+      };
+
+      await cowagent.apply(await cowagent.planApply({ provider: anthropicProvider, modelId: "deepseek-v4-pro" }));
+
+      const parsed = JSON.parse(await readFile(join(home, "CowAgent/config.json"), "utf8"));
+      expect(parsed.model).toBe("deepseek-v4-pro");
+      expect(parsed.bot_type).toBe("claudeAPI");
+      expect(parsed.claude_api_base).toBe("https://aiproxy.hzh.sealos.run/v1");
+      expect(parsed.claude_api_key).toBeUndefined();
+      expect(parsed.agent_switch.provider).toBe("aiproxy-anthropic");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  const cowAgentProviderCases = [
+    {
+      type: "gemini",
+      modelId: "gemini-3-pro-preview",
+      baseUrl: "https://generativelanguage.googleapis.com",
+      botType: "gemini",
+      baseKey: "gemini_api_base",
+      keyKey: "gemini_api_key",
+    },
+    {
+      type: "deepseek",
+      modelId: "deepseek-v4-flash",
+      baseUrl: "https://api.deepseek.com/v1",
+      botType: "deepseek",
+      baseKey: "deepseek_api_base",
+      keyKey: "deepseek_api_key",
+    },
+    {
+      type: "moonshot",
+      modelId: "moonshot-v1-32k",
+      baseUrl: "https://api.moonshot.cn/v1",
+      botType: "moonshot",
+      baseKey: "moonshot_base_url",
+      keyKey: "moonshot_api_key",
+    },
+    {
+      type: "dashscope",
+      modelId: "qwen3-max",
+      botType: "dashscope",
+      keyKey: "dashscope_api_key",
+    },
+  ] as const;
+
+  for (const item of cowAgentProviderCases) {
+    test(`cowagent adapter maps ${item.type} provider fields`, async () => {
+      const home = await mkdtemp(join(tmpdir(), `agent-switch-cowagent-${item.type}-`));
+      try {
+        const cowagent = createClientAdapters({ homeDir: home, cwd: home }).get("cowagent")!;
+        const mappedProvider: ProviderProfile = {
+          id: `cowagent-${item.type}`,
+          name: `CowAgent ${item.type}`,
+          type: item.type,
+          baseUrl: "baseUrl" in item ? item.baseUrl : undefined,
+          apiKey: { kind: "inline", value: `${item.type}-key` },
+          models: [{ id: item.modelId }],
+        };
+
+        await cowagent.apply(await cowagent.planApply({ provider: mappedProvider, modelId: item.modelId }));
+
+        const parsed = JSON.parse(await readFile(join(home, "CowAgent/config.json"), "utf8"));
+        expect(parsed.model).toBe(item.modelId);
+        expect(parsed.bot_type).toBe(item.botType);
+        if ("baseKey" in item) expect(parsed[item.baseKey]).toBe(item.baseUrl);
+        expect(parsed[item.keyKey]).toBe(`${item.type}-key`);
+        expect(parsed.agent_switch).toEqual({ provider: `cowagent-${item.type}`, model: item.modelId });
+      } finally {
+        await rm(home, { recursive: true, force: true });
+      }
+    });
+  }
+
+  test("cowagent adapter does not report bot_type as provider id", async () => {
+    const home = await mkdtemp(join(tmpdir(), "agent-switch-cowagent-current-"));
+    try {
+      await mkdir(join(home, "CowAgent"), { recursive: true });
+      await writeFile(join(home, "CowAgent/config.json"), JSON.stringify({ bot_type: "openai", model: "deepseek-v4-flash" }, null, 2));
+      const cowagent = createClientAdapters({ homeDir: home, cwd: home }).get("cowagent")!;
+
+      await expect(cowagent.getCurrent()).resolves.toMatchObject({
+        clientId: "cowagent",
+        providerId: undefined,
+        modelId: "deepseek-v4-flash",
+      });
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("cowagent adapter rejects unsupported env key names instead of copying secrets", async () => {
+    const home = await mkdtemp(join(tmpdir(), "agent-switch-cowagent-env-"));
+    try {
+      const cowagent = createClientAdapters({ homeDir: home, cwd: home }).get("cowagent")!;
+
+      await expect(cowagent.planApply({ provider, modelId: "qwen/qwen3-coder" })).rejects.toThrow("OPEN_AI_API_KEY");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   test("claude-code adapter writes only agentSwitch namespace", async () => {
     const home = await mkdtemp(join(tmpdir(), "agent-switch-claude-"));
     try {
