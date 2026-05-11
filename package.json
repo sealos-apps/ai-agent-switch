@@ -12,6 +12,8 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "build": "bun build ./src/cli/main.ts --target=bun --outfile=dist/agent-switch.js && cp dist/agent-switch.js dist/as.js",
+    "release:build": "bun run scripts/build-release.ts",
+    "release:test": "bun test tests/build-release.test.ts",
     "clean": "rm -rf dist",
     "chmod": "chmod +x dist/agent-switch.js dist/as.js",
     "prepack": "bun run build && bun run chmod",

@@ -362,3 +362,22 @@ bun pm pack
 ```
 
 包内只包含 `dist/`、`README.md`、`docs/` 和 `package.json`。
+
+## GitHub Release 下载
+
+发布版会在 GitHub Release 里提供按平台划分的 `tar.gz` 资产和 `SHA256SUMS`：
+
+- `agent-switch-linux-x64.tar.gz`
+- `agent-switch-darwin-arm64.tar.gz`
+- `agent-switch-darwin-x64.tar.gz`
+- `agent-switch-windows-x64.tar.gz`
+
+解压后即可直接运行。macOS / Linux 资产里是 `agent-switch` 和 `as`，Windows 资产里是 `agent-switch.exe` 和 `as.exe`。
+
+```bash
+tar -xzf agent-switch-linux-x64.tar.gz
+./agent-switch-linux-x64/agent-switch status
+./agent-switch-linux-x64/as status
+```
+
+如果需要校验下载完整性，可以使用同目录下的 `SHA256SUMS`。
