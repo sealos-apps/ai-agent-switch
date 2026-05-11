@@ -100,16 +100,31 @@ jobs:
         with:
           pattern: npm-*
           path: dist/npm-packages
-          merge-multiple: true
 
       - name: Publish platform packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          npm publish --access public dist/npm-packages/@agent-switch/linux-x64
-          npm publish --access public dist/npm-packages/@agent-switch/darwin-arm64
-          npm publish --access public dist/npm-packages/@agent-switch/darwin-x64
-          npm publish --access public dist/npm-packages/@agent-switch/windows-x64
+          npm publish --access public dist/npm-packages/npm-linux-x64
+          npm publish --access public dist/npm-packages/npm-darwin-arm64
+          npm publish --access public dist/npm-packages/npm-darwin-x64
+          npm publish --access public dist/npm-packages/npm-windows-x64
+
+      - name: Sync root package optionalDependencies
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const packageJsonPath = "package.json";
+          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+          const version = packageJson.version;
+          packageJson.optionalDependencies = {
+            "@agent-switch/linux-x64": version,
+            "@agent-switch/darwin-arm64": version,
+            "@agent-switch/darwin-x64": version,
+            "@agent-switch/windows-x64": version,
+          };
+          fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+          NODE
 
       - name: Publish root package
         env:
