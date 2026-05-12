@@ -74,7 +74,7 @@ export async function executeTuiCommand(app: TuiApp, command: TuiCommand): Promi
     const removed = await app.removeProvider(command.providerId);
     return {
       data: await loadTuiData(app),
-      message: { tone: removed ? "success" : "warning", text: removed ? `Removed provider ${command.providerId}` : `Provider not found ${command.providerId}` },
+      message: { tone: removed ? "success" : "warning", text: removed ? `Removed provider ${command.providerId}` : `Provider not found: ${command.providerId}` },
     };
   }
 

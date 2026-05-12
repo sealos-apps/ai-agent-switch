@@ -45,7 +45,7 @@ export function reduceTuiState(state: TuiState, action: TuiStateAction, data: Tu
   }
   if (action.type === "select-active-model") {
     const target = selectedModelTarget(state, data);
-    if (!target) return { ...state, message: { tone: "warning", text: "No selectable model" } };
+    if (!target) return { ...state, message: { tone: "warning", text: "No selectable model targets" } };
     return {
       ...state,
       activeTargetRef: target.ref,
