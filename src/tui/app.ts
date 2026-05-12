@@ -454,7 +454,7 @@ function formValues(form: TuiForm): Record<string, string | undefined> {
 export function buildCustomProviderFromForm(form: TuiForm): ProviderProfile {
   const values = formValues(form);
   const models = values.models!.split(",").map((item) => item.trim()).filter(Boolean);
-  if (models.length === 0) throw new Error("Fill models");
+  if (models.length === 0) throw new Error("At least one model id is required (comma-separated)");
   const defaultModel = form.existingProvider?.defaultModel && models.includes(form.existingProvider.defaultModel)
     ? form.existingProvider.defaultModel
     : models[0];
