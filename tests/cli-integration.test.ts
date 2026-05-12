@@ -73,7 +73,7 @@ describe("CLI integration", () => {
 
 async function run(home: string, ...args: string[]): Promise<string> {
   const proc = Bun.spawn(["bun", cliPath, ...args], {
-    env: { ...process.env, HOME: home, AI_AGENT_SWITCH_HOME: join(home, ".ai-agent-switch") },
+    env: { ...process.env, HOME: home, AI_AGENT_SWITCH_HOME: join(home, ".ai-agent-switch"), NO_COLOR: "1" },
     stdout: "pipe",
     stderr: "pipe",
   });
