@@ -3,11 +3,11 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { AgentSwitchApp } from "../src/core/app";
+import { AiAgentSwitchApp } from "../src/core/app";
 
-describe("AgentSwitchApp.useAllClients", () => {
+describe("AiAgentSwitchApp.useAllClients", () => {
   test("dry-run creates plans for supported clients without writing configs", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-use-all-dry-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-use-all-dry-"));
     try {
       const app = await createApp(home);
 
@@ -26,7 +26,7 @@ describe("AgentSwitchApp.useAllClients", () => {
   });
 
   test("-y applies plans for all supported clients", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-use-all-apply-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-use-all-apply-"));
     try {
       const app = await createApp(home);
 
@@ -50,8 +50,8 @@ describe("AgentSwitchApp.useAllClients", () => {
   });
 });
 
-async function createApp(home: string): Promise<AgentSwitchApp> {
-  const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+async function createApp(home: string): Promise<AiAgentSwitchApp> {
+  const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
   await app.addProvider({
     id: "openrouter",
     name: "OpenRouter",

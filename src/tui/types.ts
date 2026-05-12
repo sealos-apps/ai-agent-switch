@@ -1,4 +1,4 @@
-import type { AgentSwitchApp, AppStatus, ModelTarget } from "../core/app";
+import type { AiAgentSwitchApp, AppStatus, ModelTarget } from "../core/app";
 import type { ProviderProfile } from "../config/schema";
 import type { ClientCurrentState, ClientDetection, ClientId } from "../clients";
 
@@ -31,7 +31,7 @@ export type ProviderPresetItem = {
 
 export type TuiData = {
   status: Pick<AppStatus, "configPath" | "providers" | "proxy" | "routes">;
-  clients: Awaited<ReturnType<AgentSwitchApp["listClients"]>>;
+  clients: Awaited<ReturnType<AiAgentSwitchApp["listClients"]>>;
   models: ModelTarget[];
   presets: ProviderPresetItem[];
   clientCurrent?: ClientCurrentState | undefined;
@@ -99,7 +99,7 @@ export type TuiCommand =
   | { type: "remove-model"; providerId: string; modelId: string }
   | { type: "apply-client"; clientId: ClientId; target: string }
   | { type: "apply-all"; target: string }
-  | { type: "use-agent-switch-proxy"; clientId: ClientId }
+  | { type: "use-ai-agent-switch-proxy"; clientId: ClientId }
   | { type: "set-provider-default-model"; providerId: string; modelId: string }
   | { type: "set-route-primary"; target: string }
   | { type: "add-route-fallback"; target: string };

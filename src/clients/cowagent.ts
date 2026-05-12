@@ -40,25 +40,25 @@ export class CowAgentAdapter extends BaseClientAdapter {
     if (fields.apiBaseKey) config[fields.apiBaseKey] = input.provider.baseUrl;
     if (fields.apiKeyKey) config[fields.apiKeyKey] = cowAgentApiKey(input.provider, fields);
 
-    const agentSwitch = recordAt(config, "agent_switch");
-    agentSwitch.provider = input.provider.id;
-    agentSwitch.model = input.modelId;
+    const aiAgentSwitch = recordAt(config, "ai_agent_switch");
+    aiAgentSwitch.provider = input.provider.id;
+    aiAgentSwitch.model = input.modelId;
 
     const file = before === undefined
       ? { path: this.configPath, after: stringifyJson(config) }
       : { path: this.configPath, before, after: stringifyJson(config) };
-    return { clientId: this.id, summary: `将 CowAgent 切换到 ${input.provider.id}/${input.modelId}`, files: [file] };
+    return { clientId: this.id, summary: `Switch CowAgent to ${input.provider.id}/${input.modelId}`, files: [file] };
   }
 
   async getCurrent(): Promise<ClientCurrentState> {
     const config = parseJsonObject(await readTextIfExists(this.configPath));
-    const agentSwitch = config.agent_switch && typeof config.agent_switch === "object" && !Array.isArray(config.agent_switch)
-      ? config.agent_switch as Record<string, unknown>
+    const aiAgentSwitch = config.ai_agent_switch && typeof config.ai_agent_switch === "object" && !Array.isArray(config.ai_agent_switch)
+      ? config.ai_agent_switch as Record<string, unknown>
       : {};
     return {
       clientId: this.id,
-      providerId: typeof agentSwitch.provider === "string" ? agentSwitch.provider : undefined,
-      modelId: typeof agentSwitch.model === "string" ? agentSwitch.model : typeof config.model === "string" ? config.model : undefined,
+      providerId: typeof aiAgentSwitch.provider === "string" ? aiAgentSwitch.provider : undefined,
+      modelId: typeof aiAgentSwitch.model === "string" ? aiAgentSwitch.model : typeof config.model === "string" ? config.model : undefined,
       configPath: this.configPath,
     };
   }

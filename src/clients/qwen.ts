@@ -28,7 +28,7 @@ export class QwenAdapter extends BaseClientAdapter {
       : { path: this.configPath, before, after: stringifyJson(config) };
     return {
       clientId: this.id,
-      summary: `将 Qwen Code 切换到 ${input.provider.id}/${input.modelId}`,
+      summary: `Switch Qwen Code to ${input.provider.id}/${input.modelId}`,
       files: [file],
     };
   }
@@ -61,6 +61,6 @@ function applyQwenSettings(config: Record<string, unknown>, provider: ProviderPr
     name: provider.name,
     baseUrl: provider.baseUrl,
     envKey: provider.apiKeyEnv ?? (provider.apiKey?.kind === "env" ? provider.apiKey.name : undefined),
-    description: `Managed by agent-switch (${provider.type})`,
+    description: `Managed by ai-agent-switch (${provider.type})`,
   };
 }

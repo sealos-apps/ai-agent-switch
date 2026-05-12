@@ -16,7 +16,7 @@ const provider: ProviderProfile = {
 
 describe("extended client adapters", () => {
   test("gemini adapter patches model provider settings", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-gemini-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-gemini-"));
     try {
       await mkdir(join(home, ".gemini"), { recursive: true });
       await writeFile(join(home, ".gemini/settings.json"), JSON.stringify({ keep: true }, null, 2));
@@ -36,7 +36,7 @@ describe("extended client adapters", () => {
   });
 
   test("openclaw adapter preserves provider/model/runtime separation", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-openclaw-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-openclaw-"));
     try {
       await mkdir(join(home, ".openclaw"), { recursive: true });
       await writeFile(join(home, ".openclaw/openclaw.json"), `{"agents":{"defaults":{"agentRuntime":{"id":"codex"}}}}`);
@@ -56,7 +56,7 @@ describe("extended client adapters", () => {
   });
 
   test("openclaw adapter maps Anthropic providers to messages transport", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-openclaw-anthropic-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-openclaw-anthropic-"));
     try {
       await mkdir(join(home, ".openclaw"), { recursive: true });
       const openclaw = createClientAdapters({ homeDir: home, cwd: home }).get("openclaw")!;
@@ -82,7 +82,7 @@ describe("extended client adapters", () => {
   });
 
   test("crush adapter patches large model without touching sessions", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-crush-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-crush-"));
     try {
       await mkdir(join(home, ".config/crush"), { recursive: true });
       await writeFile(join(home, ".config/crush/crush.json"), JSON.stringify({ session_dir: "keep" }, null, 2));
@@ -100,7 +100,7 @@ describe("extended client adapters", () => {
   });
 
   test("crush adapter maps explicit OpenAI Chat-compatible providers to openai-compat", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-crush-chat-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-crush-chat-"));
     try {
       await mkdir(join(home, ".config/crush"), { recursive: true });
       const crush = createClientAdapters({ homeDir: home, cwd: home }).get("crush")!;
@@ -119,7 +119,7 @@ describe("extended client adapters", () => {
   });
 
   test("opencode adapter patches coder agent provider/model", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-opencode-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-opencode-"));
     try {
       await writeFile(join(home, ".opencode.json"), JSON.stringify({ keep: true }, null, 2));
       const opencode = createClientAdapters({ homeDir: home, cwd: home }).get("opencode")!;
@@ -136,7 +136,7 @@ describe("extended client adapters", () => {
   });
 
   test("cowagent adapter patches global config without dropping unknown fields", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-cowagent-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cowagent-"));
     try {
       await mkdir(join(home, "CowAgent"), { recursive: true });
       await writeFile(join(home, "CowAgent/config.json"), JSON.stringify({ channel_type: "feishu", agent: true }, null, 2));
@@ -159,14 +159,14 @@ describe("extended client adapters", () => {
       expect(parsed.bot_type).toBe("openai");
       expect(parsed.open_ai_api_base).toBe("https://aiproxy.hzh.sealos.run/v1");
       expect(parsed.open_ai_api_key).toBe("sk-test");
-      expect(parsed.agent_switch).toEqual({ provider: "aiproxy-openai", model: "deepseek-v4-flash" });
+      expect(parsed.ai_agent_switch).toEqual({ provider: "aiproxy-openai", model: "deepseek-v4-flash" });
     } finally {
       await rm(home, { recursive: true, force: true });
     }
   });
 
   test("cowagent adapter maps Anthropic providers to claudeAPI", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-cowagent-anthropic-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cowagent-anthropic-"));
     try {
       const cowagent = createClientAdapters({ homeDir: home, cwd: home }).get("cowagent")!;
       const anthropicProvider: ProviderProfile = {
@@ -185,7 +185,7 @@ describe("extended client adapters", () => {
       expect(parsed.bot_type).toBe("claudeAPI");
       expect(parsed.claude_api_base).toBe("https://aiproxy.hzh.sealos.run/v1");
       expect(parsed.claude_api_key).toBeUndefined();
-      expect(parsed.agent_switch.provider).toBe("aiproxy-anthropic");
+      expect(parsed.ai_agent_switch.provider).toBe("aiproxy-anthropic");
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -226,7 +226,7 @@ describe("extended client adapters", () => {
 
   for (const item of cowAgentProviderCases) {
     test(`cowagent adapter maps ${item.type} provider fields`, async () => {
-      const home = await mkdtemp(join(tmpdir(), `agent-switch-cowagent-${item.type}-`));
+      const home = await mkdtemp(join(tmpdir(), `ai-agent-switch-cowagent-${item.type}-`));
       try {
         const cowagent = createClientAdapters({ homeDir: home, cwd: home }).get("cowagent")!;
         const mappedProvider: ProviderProfile = {
@@ -245,7 +245,7 @@ describe("extended client adapters", () => {
         expect(parsed.bot_type).toBe(item.botType);
         if ("baseKey" in item) expect(parsed[item.baseKey]).toBe(item.baseUrl);
         expect(parsed[item.keyKey]).toBe(`${item.type}-key`);
-        expect(parsed.agent_switch).toEqual({ provider: `cowagent-${item.type}`, model: item.modelId });
+        expect(parsed.ai_agent_switch).toEqual({ provider: `cowagent-${item.type}`, model: item.modelId });
       } finally {
         await rm(home, { recursive: true, force: true });
       }
@@ -253,7 +253,7 @@ describe("extended client adapters", () => {
   }
 
   test("cowagent adapter does not report bot_type as provider id", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-cowagent-current-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cowagent-current-"));
     try {
       await mkdir(join(home, "CowAgent"), { recursive: true });
       await writeFile(join(home, "CowAgent/config.json"), JSON.stringify({ bot_type: "openai", model: "deepseek-v4-flash" }, null, 2));
@@ -270,7 +270,7 @@ describe("extended client adapters", () => {
   });
 
   test("cowagent adapter rejects unsupported env key names instead of copying secrets", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-cowagent-env-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cowagent-env-"));
     try {
       const cowagent = createClientAdapters({ homeDir: home, cwd: home }).get("cowagent")!;
 
@@ -280,8 +280,8 @@ describe("extended client adapters", () => {
     }
   });
 
-  test("claude-code adapter writes only agentSwitch namespace", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-claude-"));
+  test("claude-code adapter writes only aiAgentSwitch namespace", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-claude-"));
     try {
       await mkdir(join(home, ".claude"), { recursive: true });
       await writeFile(join(home, ".claude/settings.json"), JSON.stringify({ existing: true }, null, 2));
@@ -291,8 +291,8 @@ describe("extended client adapters", () => {
 
       const parsed = JSON.parse(await readFile(join(home, ".claude/settings.json"), "utf8"));
       expect(parsed.existing).toBe(true);
-      expect(parsed.agentSwitch.provider).toBe("openrouter");
-      expect(parsed.agentSwitch.model).toBe("qwen/qwen3-coder");
+      expect(parsed.aiAgentSwitch.provider).toBe("openrouter");
+      expect(parsed.aiAgentSwitch.model).toBe("qwen/qwen3-coder");
     } finally {
       await rm(home, { recursive: true, force: true });
     }

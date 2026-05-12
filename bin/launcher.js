@@ -4,10 +4,10 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
 const platformPackageNames = {
-  "linux-x64": "@agent-switch/linux-x64",
-  "darwin-arm64": "@agent-switch/darwin-arm64",
-  "darwin-x64": "@agent-switch/darwin-x64",
-  "windows-x64": "@agent-switch/windows-x64",
+  "linux-x64": "@ai-agent-switch/linux-x64",
+  "darwin-arm64": "@ai-agent-switch/darwin-arm64",
+  "darwin-x64": "@ai-agent-switch/darwin-x64",
+  "windows-x64": "@ai-agent-switch/windows-x64",
 };
 
 export function platformPackageName(runtime = { platform: process.platform, arch: process.arch }) {

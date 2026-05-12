@@ -4,9 +4,9 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { applyEdits, format, modify, parse, ParseError, printParseErrorCode } from "jsonc-parser";
 import {
-  agentSwitchConfigSchema,
+  aiAgentSwitchConfigSchema,
   createDefaultConfig,
-  type AgentSwitchConfig,
+  type AiAgentSwitchConfig,
   type ValidationResult,
 } from "./schema";
 import { validateConfigSemantics } from "./semantic";
@@ -27,7 +27,7 @@ export class ConfigStore {
 
   constructor(options: ConfigStoreOptions = {}) {
     this.homeDir = options.homeDir ?? homedir();
-    this.configDir = process.env.AGENT_SWITCH_HOME ?? join(this.homeDir, ".agent-switch");
+    this.configDir = process.env.AI_AGENT_SWITCH_HOME ?? join(this.homeDir, ".ai-agent-switch");
     this.configPath = options.configPath ?? join(this.configDir, "config.jsonc");
     this.statePath = join(this.configDir, "state.jsonc");
   }
@@ -39,7 +39,7 @@ export class ConfigStore {
     }
   }
 
-  async load(): Promise<AgentSwitchConfig> {
+  async load(): Promise<AiAgentSwitchConfig> {
     await this.ensure();
     const text = await readFile(this.configPath, "utf8");
     const errors: ParseError[] = [];
@@ -48,7 +48,7 @@ export class ConfigStore {
       const issue = errors.map((error) => printParseErrorCode(error.error)).join(", ");
       throw new Error(`Invalid JSONC config: ${issue}`);
     }
-    return agentSwitchConfigSchema.parse(data);
+    return aiAgentSwitchConfigSchema.parse(data);
   }
 
   async validate(): Promise<ValidationResult> {
@@ -60,12 +60,12 @@ export class ConfigStore {
     }
   }
 
-  async update(mutator: (config: AgentSwitchConfig) => AgentSwitchConfig | void): Promise<AgentSwitchConfig> {
+  async update(mutator: (config: AiAgentSwitchConfig) => AiAgentSwitchConfig | void): Promise<AiAgentSwitchConfig> {
     return withFileLock(this.configPath, async () => {
       const current = await this.load();
       const draft = structuredClone(current);
       const next = mutator(draft) ?? draft;
-      const parsed = agentSwitchConfigSchema.parse(next);
+      const parsed = aiAgentSwitchConfigSchema.parse(next);
       const original = await readFile(this.configPath, "utf8");
       let text = original;
 
@@ -86,9 +86,9 @@ export class ConfigStore {
   }
 }
 
-export function stringifyConfig(config: AgentSwitchConfig): string {
+export function stringifyConfig(config: AiAgentSwitchConfig): string {
   return `{
-  // agent-switch user configuration. You can edit this file by hand.
+  // ai-agent-switch user configuration. You can edit this file by hand.
   "version": ${config.version},
   "clients": ${JSON.stringify(config.clients, null, 2).replaceAll("\n", "\n  ")},
   "providers": ${JSON.stringify(config.providers, null, 2).replaceAll("\n", "\n  ")},

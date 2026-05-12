@@ -30,8 +30,8 @@ export abstract class BaseClientAdapter implements ClientAdapter {
     const command = await this.findCommand();
     const executableAvailable = command !== undefined;
     const details = [
-      executableAvailable ? `命令可用：${command}` : "未检测到命令",
-      configExists ? "配置文件已存在" : "未找到配置文件，写入时会懒创建",
+      executableAvailable ? `Command available: ${command}` : "Command not found",
+      configExists ? "Config file exists" : "Config file not found; it will be created lazily when writing",
     ];
 
     return {

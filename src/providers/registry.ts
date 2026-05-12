@@ -1,8 +1,8 @@
-import { createDefaultConfig, type AgentSwitchConfig, type ProviderProfile } from "../config/schema";
+import { createDefaultConfig, type AiAgentSwitchConfig, type ProviderProfile } from "../config/schema";
 import { parseUseTarget } from "../cli/use";
 
 export class ProviderRegistry {
-  constructor(private readonly config: AgentSwitchConfig) {}
+  constructor(private readonly config: AiAgentSwitchConfig) {}
 
   static empty(): ProviderRegistry {
     return new ProviderRegistry(createDefaultConfig());

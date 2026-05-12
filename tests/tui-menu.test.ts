@@ -143,15 +143,15 @@ describe("TUI menu rendering", () => {
     expect(frame).toContain("Clients");
     expect(frame).toContain("Providers");
     expect(frame).toContain("Models");
-    expect(frame).toContain("↑/↓ 移动");
-    expect(frame).toContain("h 帮助");
+    expect(frame).toContain("↑/↓ move");
+    expect(frame).toContain("h help");
   });
 
   test("renders provider setup actions when no provider exists", () => {
     const state = reduceTuiState(createTuiState(), { type: "open-view", view: "providers" }, dataWithoutProviders());
     const frame = renderTuiFrame({ state, data: dataWithoutProviders() }, { rows: 24, cols: 100 });
 
-    expect(frame).toContain("还没有 provider");
+    expect(frame).toContain("No providers yet");
     expect(frame).toContain("Add from preset");
     expect(frame).toContain("Add custom provider");
   });
@@ -163,7 +163,7 @@ describe("TUI menu rendering", () => {
     expect(frame).toContain("OpenAI Codex");
     expect(frame).not.toContain("enabled");
     expect(frame).not.toContain("su8 / gpt-5.5");
-    expect(frame).toContain("Enter 进入");
+    expect(frame).toContain("Enter open");
   });
 
   test("renders Client detail after a client is selected", () => {
@@ -178,7 +178,7 @@ describe("TUI menu rendering", () => {
     expect(frame).toContain("Client / OpenAI Codex");
     expect(frame).toContain("su8 / gpt-5.5");
     expect(frame).toContain("Apply current model");
-    expect(frame).toContain("Use agent-switch proxy");
+    expect(frame).toContain("Use ai-agent-switch proxy");
     expect(frame).toContain("sub2api/gpt-5.5 -> su8/gpt-5.4");
   });
 
@@ -186,9 +186,9 @@ describe("TUI menu rendering", () => {
     const state = reduceTuiState(createTuiState(), { type: "open-view", view: "models" }, dataWithProviders());
     const frame = renderTuiFrame({ state, data: dataWithProviders() }, { rows: 24, cols: 100 });
 
-    expect(frame).toContain("a 添加模型");
-    expect(frame).toContain("x 删除");
-    expect(frame).toContain("* 默认");
+    expect(frame).toContain("a add model");
+    expect(frame).toContain("x remove");
+    expect(frame).toContain("* default");
   });
 
   test("renders message tone in the frame", () => {
@@ -216,8 +216,8 @@ describe("TUI menu rendering", () => {
     const state = reduceTuiState(createTuiState(), { type: "open-view", view: "providers" }, data);
     const frame = renderTuiFrame({ state, data }, { rows: 5, cols: 100 });
 
-    expect(frame).toContain("agent-switch");
-    expect(frame).toContain("Esc 返回");
+    expect(frame).toContain("ai-agent-switch");
+    expect(frame).toContain("Esc back");
     expect(frame).toContain("status:");
     expect(frame).toContain("message:");
   });
@@ -249,14 +249,14 @@ describe("TUI menu rendering", () => {
     const frame = renderTuiFrame({ state, data: dataWithoutProviders() }, { rows: 40, cols: 80 });
 
     expect(frame).toContain("<openai-chat-compatible>");
-    expect(frame).toContain("可选类型");
+    expect(frame).toContain("Available types");
     expect(frame).toContain("OpenAI Responses API");
     expect(frame).toContain("Chat Completions compatible");
     for (const type of selectableProviderTypes) {
       expect(frame).toContain(type);
     }
-    expect(frame).toContain("Space 切换选项");
-    expect(frame).toContain("Ctrl-C 退出");
+    expect(frame).toContain("Space option");
+    expect(frame).toContain("Ctrl-C quit");
   });
 
   test("accepts pasted multi-character input in text fields", async () => {
@@ -362,14 +362,14 @@ describe("TUI menu rendering", () => {
       view: "confirm" as const,
       previousView: "providers" as const,
       confirm: {
-        message: "删除 provider openrouter？",
+        message: "Remove provider openrouter?",
         command: { type: "remove-provider", providerId: "openrouter" } as const,
       },
     };
     const frame = renderTuiFrame({ state, data: dataWithProviders() }, { rows: 24, cols: 100 });
 
-    expect(frame).toContain("删除 provider openrouter？");
-    expect(frame).toContain("q/Ctrl-C 退出");
+    expect(frame).toContain("Remove provider openrouter?");
+    expect(frame).toContain("q/Ctrl-C quit");
   });
 
   test("preserves edit-only provider fields when rebuilding a custom provider", () => {
@@ -458,24 +458,24 @@ describe("TUI command execution", () => {
     expect(result.message.text).toContain("codex");
   });
 
-  test("connects a selected client to the agent-switch proxy through the controller", async () => {
+  test("connects a selected client to the ai-agent-switch proxy through the controller", async () => {
     const calls: string[] = [];
     const app = tuiApp({
       useClientProxy: async (input: { clientId: string; yes: boolean }) => {
         calls.push(`${input.clientId}:${input.yes}`);
         return { applied: true, requiresConfirmation: false, plan: { clientId: input.clientId, summary: "ok", files: [] } };
       },
-      getClientCurrent: async () => ({ clientId: "codex", providerId: "agent-switch-proxy", modelId: "agent-switch/default", configPath: "/tmp/.codex/config.toml" }),
+      getClientCurrent: async () => ({ clientId: "codex", providerId: "ai-agent-switch-proxy", modelId: "ai-agent-switch/default", configPath: "/tmp/.codex/config.toml" }),
     });
 
     const result = await executeTuiCommand(app as never, {
-      type: "use-agent-switch-proxy",
+      type: "use-ai-agent-switch-proxy",
       clientId: "codex",
     });
 
     expect(calls).toEqual(["codex:true"]);
-    expect(result.message.text).toContain("agent-switch proxy");
-    expect(result.data.clientCurrent?.providerId).toBe("agent-switch-proxy");
+    expect(result.message.text).toContain("ai-agent-switch proxy");
+    expect(result.data.clientCurrent?.providerId).toBe("ai-agent-switch-proxy");
   });
 
   test("applies the selected model to a client from client detail", async () => {
@@ -498,7 +498,7 @@ describe("TUI command execution", () => {
     const result = await handleClientDetailEnter(app as never, state as never, dataWithClientCurrent() as never);
 
     expect(calls).toEqual(["codex:openrouter/qwen/qwen3-coder:true"]);
-    expect(result.state.message.text).toContain("已应用");
+    expect(result.state.message.text).toContain("Applied");
     expect(result.data.clientCurrent?.providerId).toBe("su8");
   });
 

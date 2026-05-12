@@ -53,7 +53,7 @@ export class HermesAdapter extends BaseClientAdapter {
       files.push(envBefore === undefined ? { path: this.envPath, after: envAfter } : { path: this.envPath, before: envBefore, after: envAfter });
     }
 
-    return { clientId: this.id, summary: `将 Hermes Agent 切换到 ${input.provider.id}/${input.modelId}`, files };
+    return { clientId: this.id, summary: `Switch Hermes Agent to ${input.provider.id}/${input.modelId}`, files };
   }
 
   override async apply(plan: PatchPlan): Promise<void> {

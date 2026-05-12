@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "agent-switch",
+      "name": "ai-agent-switch",
       "dependencies": {
         "cac": "^6.7.14",
         "jsonc-parser": "^3.3.1",

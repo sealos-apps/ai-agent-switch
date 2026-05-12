@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { AgentSwitchApp } from "../src/core/app";
+import { AiAgentSwitchApp } from "../src/core/app";
 import { getProviderPreset, listProviderPresets } from "../src/providers/presets";
 
 describe("provider presets", () => {
@@ -12,7 +12,7 @@ describe("provider presets", () => {
     expect(ids).toContain("deepseek");
     expect(ids).toContain("ollama");
     expect(ids).toContain("lmstudio");
-    expect(ids).toContain("agent-switch-proxy");
+    expect(ids).toContain("ai-agent-switch-proxy");
   });
 
   test("converts preset into provider profile with env key override", () => {
@@ -25,23 +25,23 @@ describe("provider presets", () => {
     });
   });
 
-  test("converts agent-switch-proxy preset into local OpenAI-compatible provider without api key", () => {
-    const preset = getProviderPreset("agent-switch-proxy");
+  test("converts ai-agent-switch-proxy preset into local OpenAI-compatible provider without api key", () => {
+    const preset = getProviderPreset("ai-agent-switch-proxy");
     expect(preset?.toProvider()).toMatchObject({
-      id: "agent-switch-proxy",
-      name: "agent-switch Proxy",
+      id: "ai-agent-switch-proxy",
+      name: "AI Agent Switch Proxy",
       type: "openai-chat-compatible",
       baseUrl: "http://127.0.0.1:17890/v1",
-      models: [{ id: "agent-switch/default" }],
-      defaultModel: "agent-switch/default",
+      models: [{ id: "ai-agent-switch/default" }],
+      defaultModel: "ai-agent-switch/default",
     });
     expect(preset?.toProvider().apiKeyEnv).toBeUndefined();
   });
 
   test("adds a preset provider through app API", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-preset-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-preset-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       const provider = await app.addProviderPreset("deepseek", { apiKeyEnv: "DEEPSEEK_API_KEY" });
 
       expect(provider.id).toBe("deepseek");

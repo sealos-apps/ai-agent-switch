@@ -6,16 +6,16 @@ describe("npm package builder", () => {
     const config = platformPackageConfig("windows-x64", "0.1.0");
     const manifest = renderPackageManifest(config);
 
-    expect(config.packageName).toBe("@agent-switch/windows-x64");
+    expect(config.packageName).toBe("@ai-agent-switch/windows-x64");
     expect(config.binarySuffix).toBe(".exe");
-    expect(config.binaryName("agent-switch")).toBe("agent-switch.exe");
+    expect(config.binaryName("ai-agent-switch")).toBe("ai-agent-switch.exe");
     expect(config.binaryName("as")).toBe("as.exe");
-    expect(manifest.name).toBe("@agent-switch/windows-x64");
+    expect(manifest.name).toBe("@ai-agent-switch/windows-x64");
     expect(manifest.os).toEqual(["win32"]);
     expect(manifest.cpu).toEqual(["x64"]);
-    expect(manifest.bin["agent-switch"]).toBe("./agent-switch.exe");
+    expect(manifest.bin["ai-agent-switch"]).toBe("./ai-agent-switch.exe");
     expect(manifest.bin.as).toBe("./as.exe");
-    expect(manifest.files).toEqual(["agent-switch.exe", "as.exe"]);
+    expect(manifest.files).toEqual(["ai-agent-switch.exe", "as.exe"]);
     expect(manifest.publishConfig.access).toBe("public");
   });
 
@@ -24,13 +24,13 @@ describe("npm package builder", () => {
     const manifest = renderPackageManifest(config);
 
     expect(config.binarySuffix).toBe("");
-    expect(config.binaryName("agent-switch")).toBe("agent-switch");
+    expect(config.binaryName("ai-agent-switch")).toBe("ai-agent-switch");
     expect(config.binaryName("as")).toBe("as");
     expect(manifest.os).toEqual(["darwin"]);
     expect(manifest.cpu).toEqual(["arm64"]);
-    expect(manifest.bin["agent-switch"]).toBe("./agent-switch");
+    expect(manifest.bin["ai-agent-switch"]).toBe("./ai-agent-switch");
     expect(manifest.bin.as).toBe("./as");
-    expect(manifest.files).toEqual(["agent-switch", "as"]);
+    expect(manifest.files).toEqual(["ai-agent-switch", "as"]);
   });
 
   test("runtime platform detection maps supported hosts", () => {

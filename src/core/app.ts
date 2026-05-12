@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs";
 import { ConfigStore, type ConfigStoreOptions } from "../config/store";
-import { StateStore, type AgentSwitchState } from "../config/state";
+import { StateStore, type AiAgentSwitchState } from "../config/state";
 import {
-  agentSwitchConfigSchema,
+  aiAgentSwitchConfigSchema,
   providerProfileSchema,
-  type AgentSwitchConfig,
+  type AiAgentSwitchConfig,
   type ProviderProfile,
   type RouteCandidate,
   type ValidationResult,
@@ -14,7 +14,7 @@ import { ProviderRegistry, maskProvider } from "../providers/registry";
 import { testProviderConnectivity } from "../providers/connectivity";
 import { getProviderPreset, type ProviderPresetAddOptions } from "../providers/presets";
 
-export type AgentSwitchAppOptions = ConfigStoreOptions & {
+export type AiAgentSwitchAppOptions = ConfigStoreOptions & {
   cwd?: string;
 };
 
@@ -55,9 +55,9 @@ export type AppStatus = {
   statePath: string;
   providers: ProviderProfile[];
   clients: ClientCurrentState[];
-  proxy: AgentSwitchConfig["proxy"];
-  routes: AgentSwitchConfig["routes"];
-  state: AgentSwitchState;
+  proxy: AiAgentSwitchConfig["proxy"];
+  routes: AiAgentSwitchConfig["routes"];
+  state: AiAgentSwitchState;
 };
 
 export type DoctorReport = {
@@ -85,12 +85,12 @@ export type UpdateProxyConfigInput = {
   failoverEnabled?: boolean | undefined;
 };
 
-export class AgentSwitchApp {
+export class AiAgentSwitchApp {
   readonly store: ConfigStore;
   readonly stateStore: StateStore;
   readonly adapters: Map<ClientId, ClientAdapter>;
 
-  constructor(options: AgentSwitchAppOptions = {}) {
+  constructor(options: AiAgentSwitchAppOptions = {}) {
     this.store = new ConfigStore(options);
     this.stateStore = new StateStore(this.store.statePath);
     this.adapters = createClientAdapters({ homeDir: this.store.homeDir, cwd: options.cwd ?? process.cwd() });
@@ -101,7 +101,7 @@ export class AgentSwitchApp {
     return this.store.configPath;
   }
 
-  async loadConfig(): Promise<AgentSwitchConfig> {
+  async loadConfig(): Promise<AiAgentSwitchConfig> {
     return this.store.load();
   }
 
@@ -270,7 +270,7 @@ export class AgentSwitchApp {
     );
   }
 
-  async updateProxyConfig(input: UpdateProxyConfigInput): Promise<AgentSwitchConfig["proxy"]> {
+  async updateProxyConfig(input: UpdateProxyConfigInput): Promise<AiAgentSwitchConfig["proxy"]> {
     const config = await this.store.update((draft) => {
       if (input.enabled !== undefined) draft.proxy.enabled = input.enabled;
       if (input.host !== undefined) draft.proxy.host = input.host;
@@ -310,7 +310,7 @@ export class AgentSwitchApp {
 
   async useClient(input: UseClientInput): Promise<UseClientResult> {
     const config = await this.store.load();
-    agentSwitchConfigSchema.parse(config);
+    aiAgentSwitchConfigSchema.parse(config);
     const registry = new ProviderRegistry(config);
     const ref = registry.resolveModelRef(input.target);
     const provider = registry.get(ref.providerId);
@@ -343,7 +343,7 @@ export class AgentSwitchApp {
 
   async useClientProxy(input: UseClientProxyInput): Promise<UseClientResult> {
     const config = await this.store.load();
-    agentSwitchConfigSchema.parse(config);
+    aiAgentSwitchConfigSchema.parse(config);
     const adapter = this.adapters.get(input.clientId);
     if (!adapter) throw new Error(`Client not supported: ${input.clientId}`);
     const validation = await adapter.validate();
@@ -351,10 +351,10 @@ export class AgentSwitchApp {
       throw new Error(`Client config is invalid: ${validation.issues.join("; ")}`);
     }
 
-    const modelId = "agent-switch/default";
+    const modelId = "ai-agent-switch/default";
     const provider: ProviderProfile = {
-      id: "agent-switch-proxy",
-      name: "agent-switch Proxy",
+      id: "ai-agent-switch-proxy",
+      name: "AI Agent Switch Proxy",
       type: "openai-chat-compatible",
       baseUrl: proxyBaseUrl(config.proxy.host, config.proxy.port),
       models: [{ id: modelId }],
@@ -380,7 +380,7 @@ export class AgentSwitchApp {
 
   async useAllClients(input: UseAllClientsInput): Promise<UseAllClientsResult> {
     const config = await this.store.load();
-    agentSwitchConfigSchema.parse(config);
+    aiAgentSwitchConfigSchema.parse(config);
     const registry = new ProviderRegistry(config);
     const ref = registry.resolveModelRef(input.target);
     const provider = registry.get(ref.providerId);
@@ -446,7 +446,7 @@ export class AgentSwitchApp {
     const checks: DoctorReport["checks"] = [];
     const configValidation = await this.store.validate();
     checks.push({
-      name: "agent-switch 配置",
+      name: "ai-agent-switch config",
       ok: configValidation.ok,
       detail: configValidation.ok ? this.store.configPath : configValidation.issues.join("; "),
     });
@@ -454,7 +454,7 @@ export class AgentSwitchApp {
     for (const adapter of this.adapters.values()) {
       const validation = await adapter.validate();
       checks.push({
-        name: `${adapter.displayName} 配置`,
+        name: `${adapter.displayName} config`,
         ok: validation.ok,
         detail: validation.ok ? adapter.configPath : validation.issues.join("; "),
       });

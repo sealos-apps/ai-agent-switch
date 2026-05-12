@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { ConfigStore } from "../src/config/store";
 import { validateConfigSemantics } from "../src/config/semantic";
 import { createDefaultConfig } from "../src/config/schema";
-import { AgentSwitchApp } from "../src/core/app";
+import { AiAgentSwitchApp } from "../src/core/app";
 
 describe("semantic config validation", () => {
   test("rejects provider map key that differs from provider.id", () => {
@@ -44,7 +44,7 @@ describe("semantic config validation", () => {
   });
 
   test("ConfigStore.validate includes semantic issues", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-semantic-store-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-semantic-store-"));
     try {
       const store = new ConfigStore({ homeDir: home });
       await store.ensure();
@@ -68,9 +68,9 @@ describe("semantic config validation", () => {
   });
 
   test("doctor reports semantic config failure", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-semantic-doctor-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-semantic-doctor-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       await app.store.ensure();
       const config = createDefaultConfig();
       config.routes.default = {

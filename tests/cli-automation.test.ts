@@ -8,7 +8,7 @@ const cliPath = join(import.meta.dir, "..", "src", "cli", "main.ts");
 
 describe("CLI automation output", () => {
   test("use --dry-run prints JSON patch plan and does not write client config", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-dry-run-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-dry-run-"));
     try {
       await run(home, "provider", "add", "--id", "openrouter", "--name", "OpenRouter", "--type", "openai-compatible", "--base-url", "https://openrouter.ai/api/v1", "--model", "qwen/qwen3-coder");
       const output = await run(home, "use", "qwen", "openrouter/qwen/qwen3-coder", "--dry-run", "--json");
@@ -23,7 +23,7 @@ describe("CLI automation output", () => {
   });
 
   test("doctor, provider, client, and route commands support JSON output", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-json-commands-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-json-commands-"));
     try {
       await run(home, "provider", "add", "--id", "openrouter", "--name", "OpenRouter", "--type", "openai-compatible", "--base-url", "https://openrouter.ai/api/v1", "--model", "a", "--model", "b");
       await run(home, "route", "set-default", "openrouter/a");
@@ -46,11 +46,11 @@ describe("CLI automation output", () => {
   });
 
   test("config schema prints a JSON schema-like document", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-schema-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-schema-"));
     try {
       const output = await run(home, "config", "schema");
       const parsed = JSON.parse(output) as { title: string; properties: Record<string, unknown> };
-      expect(parsed.title).toBe("agent-switch config");
+      expect(parsed.title).toBe("AI Agent Switch config");
       expect(parsed.properties.providers).toBeDefined();
     } finally {
       await rm(home, { recursive: true, force: true });
@@ -58,7 +58,7 @@ describe("CLI automation output", () => {
   });
 
   test("config validate --json returns semantic validation result", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-validate-json-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-validate-json-"));
     try {
       const output = await run(home, "config", "validate", "--json");
       const parsed = JSON.parse(output) as { ok: boolean; issues: string[] };
@@ -70,10 +70,10 @@ describe("CLI automation output", () => {
   });
 
   test("completion zsh includes core commands", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-completion-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-completion-"));
     try {
       const output = await run(home, "completion", "zsh");
-      expect(output).toContain("#compdef agent-switch as");
+      expect(output).toContain("#compdef ai-agent-switch as");
       expect(output).toContain("provider");
       expect(output).toContain("model");
       expect(output).toContain("route");
@@ -85,7 +85,7 @@ describe("CLI automation output", () => {
 
 async function run(home: string, ...args: string[]): Promise<string> {
   const proc = Bun.spawn(["bun", cliPath, ...args], {
-    env: { ...process.env, HOME: home, AGENT_SWITCH_HOME: join(home, ".agent-switch") },
+    env: { ...process.env, HOME: home, AI_AGENT_SWITCH_HOME: join(home, ".ai-agent-switch") },
     stdout: "pipe",
     stderr: "pipe",
   });

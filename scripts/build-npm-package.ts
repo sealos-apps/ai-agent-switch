@@ -49,7 +49,7 @@ export function platformPackageConfig(platform: NpmPlatform, version: string): N
   return {
     platform,
     version,
-    packageName: `@agent-switch/${platform}`,
+    packageName: `@ai-agent-switch/${platform}`,
     binarySuffix,
     os: os as NpmPlatformConfig["os"],
     cpu,
@@ -71,14 +71,14 @@ export function renderPackageManifest(config: NpmPlatformConfig) {
   return {
     name: config.packageName,
     version: config.version,
-    description: `agent-switch standalone executable for ${config.platform}`,
+    description: `ai-agent-switch standalone executable for ${config.platform}`,
     os: [config.os],
     cpu: [config.cpu],
     bin: {
-      "agent-switch": `./${config.binaryName("agent-switch")}`,
+      "ai-agent-switch": `./${config.binaryName("ai-agent-switch")}`,
       as: `./${config.binaryName("as")}`,
     },
-    files: [config.binaryName("agent-switch"), config.binaryName("as")],
+    files: [config.binaryName("ai-agent-switch"), config.binaryName("as")],
     publishConfig: {
       access: "public",
     },
@@ -109,7 +109,7 @@ export async function buildNpmPackage(options: BuildNpmPackageOptions): Promise<
   const packageRoot = path.resolve(options.outDir, config.packageName);
   const packageJsonPath = path.join(packageRoot, "package.json");
   const entrypoint = options.entrypoint ?? path.resolve(repoRoot(), "src/cli/main.ts");
-  const mainBinaryPath = path.join(packageRoot, config.binaryName("agent-switch"));
+  const mainBinaryPath = path.join(packageRoot, config.binaryName("ai-agent-switch"));
   const aliasBinaryPath = path.join(packageRoot, config.binaryName("as"));
 
   await rm(packageRoot, { recursive: true, force: true });

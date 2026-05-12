@@ -7,7 +7,7 @@ const cliPath = join(import.meta.dir, "..", "src", "cli", "main.ts");
 
 describe("CLI provider presets", () => {
   test("provider preset-list --json returns presets", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-cli-presets-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-presets-"));
     try {
       const output = await run(home, "provider", "preset-list", "--json");
       const presets = JSON.parse(output) as { id: string }[];
@@ -18,7 +18,7 @@ describe("CLI provider presets", () => {
   });
 
   test("provider preset-add creates provider config", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-cli-preset-add-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-preset-add-"));
     try {
       await run(home, "provider", "preset-add", "openrouter", "--api-key-env", "OPENROUTER_API_KEY");
       const output = await run(home, "provider", "show", "openrouter", "--json");
@@ -32,16 +32,16 @@ describe("CLI provider presets", () => {
     }
   });
 
-  test("provider preset-add creates local agent-switch proxy provider", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-cli-proxy-preset-add-"));
+  test("provider preset-add creates local ai-agent-switch proxy provider", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-proxy-preset-add-"));
     try {
-      await run(home, "provider", "preset-add", "agent-switch-proxy");
-      const output = await run(home, "provider", "show", "agent-switch-proxy", "--json");
+      await run(home, "provider", "preset-add", "ai-agent-switch-proxy");
+      const output = await run(home, "provider", "show", "ai-agent-switch-proxy", "--json");
       const provider = JSON.parse(output) as { id: string; baseUrl: string; defaultModel: string; apiKeyEnv?: string };
 
-      expect(provider.id).toBe("agent-switch-proxy");
+      expect(provider.id).toBe("ai-agent-switch-proxy");
       expect(provider.baseUrl).toBe("http://127.0.0.1:17890/v1");
-      expect(provider.defaultModel).toBe("agent-switch/default");
+      expect(provider.defaultModel).toBe("ai-agent-switch/default");
       expect(provider.apiKeyEnv).toBeUndefined();
     } finally {
       await rm(home, { recursive: true, force: true });
@@ -51,7 +51,7 @@ describe("CLI provider presets", () => {
 
 async function run(home: string, ...args: string[]): Promise<string> {
   const proc = Bun.spawn(["bun", cliPath, ...args], {
-    env: { ...process.env, HOME: home, AGENT_SWITCH_HOME: join(home, ".agent-switch") },
+    env: { ...process.env, HOME: home, AI_AGENT_SWITCH_HOME: join(home, ".ai-agent-switch") },
     stdout: "pipe",
     stderr: "pipe",
   });
