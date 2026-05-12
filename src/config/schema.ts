@@ -119,7 +119,7 @@ export type RoutesConfig = {
   default?: RouteConfig | undefined;
 };
 
-export type AgentSwitchConfig = {
+export type AiAgentSwitchConfig = {
   version: 1;
   clients: Record<string, ClientProfile>;
   providers: Record<string, ProviderProfile>;
@@ -172,7 +172,7 @@ export const routesConfigSchema: z.ZodType<RoutesConfig> = z.object({
   }).optional(),
 });
 
-export const agentSwitchConfigSchema: z.ZodType<AgentSwitchConfig> = z.object({
+export const aiAgentSwitchConfigSchema: z.ZodType<AiAgentSwitchConfig> = z.object({
   version: z.literal(1),
   clients: z.record(
     z.object({
@@ -201,7 +201,7 @@ export const agentSwitchConfigSchema: z.ZodType<AgentSwitchConfig> = z.object({
   }),
 });
 
-export function createDefaultConfig(): AgentSwitchConfig {
+export function createDefaultConfig(): AiAgentSwitchConfig {
   return {
     version: 1,
     clients: {},

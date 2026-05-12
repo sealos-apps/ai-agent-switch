@@ -2,13 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { AgentSwitchApp } from "../src/core/app";
+import { AiAgentSwitchApp } from "../src/core/app";
 
 describe("proxy config", () => {
   test("updates proxy enablement, upstream proxy, retry, and failover settings", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-proxy-config-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-proxy-config-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       await app.updateProxyConfig({
         enabled: true,
         host: "127.0.0.1",

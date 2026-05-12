@@ -1,63 +1,65 @@
-# agent-switch MVP Scope
+# AI Agent Switch MVP Scope
 
-## 产品定位
+## Product Positioning
 
-`agent-switch` 是面向个人用户的 AI 编程客户端配置控制平面。
+AI Agent Switch is a personal AI coding client control plane. The npm package name is `ai-agent-switch`.
 
-它解决的问题是：用户同时使用 Codex、Gemini CLI、Qwen Code、OpenClaw、Hermes、Crush、OpenCode、CowAgent、Claude Code 等工具时，不想重复维护 provider、baseUrl、apiKey、model 和代理策略。
+It solves a common workflow problem: developers often use Codex, Gemini CLI, Qwen Code, OpenClaw, Hermes, Crush, OpenCode, CowAgent, Claude Code, and other tools at the same time, but do not want to maintain provider, base URL, API key, model, and proxy settings repeatedly in every client.
 
-## 第一版必须完成
+## First Version Requirements
 
-- 裸命令 `agent-switch` / `as` 默认进入 TUI。
-- TUI 首页使用主菜单：`Clients`、`Providers`、`Models`。
-- TUI 主导航使用方向键，`h` 打开帮助，`Esc` 返回上一级。
-- TUI 支持从 provider preset 或自定义 provider 初始化配置；Clients 首页只展示可配置 client 列表，进入某个 client 后才读取当前配置，并可选择继续使用当前配置或接入 agent-switch proxy。
-- TUI 自定义 provider 要区分 `openai-responses` 和 `openai-chat-compatible`，不能把 OpenAI 两种 wire API 混成一个类型。
-- TUI 支持 client 检测/查看，provider 编辑/测试/删除，以及 model 添加/删除/default/route 基础管理。
-- CLI 支持 provider 管理、client 列表/检测/查看、单个 client 接入 agent-switch proxy、配置校验、模型切换、doctor、proxy 状态。
-- 支持 `-y` / `--yes`，只跳过确认，不跳过硬校验。
-- `agent-switch` 自身配置使用 JSONC。
-- 适配客户端原生配置：JSON、JSONC、TOML、YAML。
-- 支持本地代理的重试和有序 failover。
-- 支持 `proxy enable/disable/set/start/stop/status`。
-- 支持后台代理启动。
-- `provider test` 使用配置中的上游代理。
-- 支持 provider 下模型增删。
-- 支持 provider 默认模型设置。
-- 支持 `model list` 平铺查看所有可切换模型目标。
-- 支持代理默认 route/fallback 链。
-- 代理按 route 改写 OpenAI-compatible 请求体 `model`。
-- 支持代理 `/health` 健康检查。
-- 支持代理 `/v1/models` 模型列表。
-- `proxy start` 尊重 `proxy.enabled` 开关。
-- 支持 `--json` 脚本化输出。
-- `config validate` 包含 schema 校验和跨字段语义校验。
-- 支持 `use --dry-run` 预演。
-- 保留 `use` / `use-all` 作为高级直接写客户端原生 provider/model 的 CLI 路径。
-- 支持 `config schema` 和 shell completion。
-- 支持常见 provider presets，降低接入成本。
-- 支持 `agent-switch-proxy` 本地代理 preset。
-- 不使用 SQLite 或嵌入式数据库。
+- Bare `ai-agent-switch` / `as` opens the TUI by default.
+- The TUI home screen contains `Clients`, `Providers`, and `Models`.
+- TUI navigation uses arrow keys, `h` for help, and `Esc` to go back.
+- The TUI can initialize providers from presets or custom provider input.
+- The Clients screen lists configurable clients first; it reads current client config only after opening a client detail view.
+- Client detail can keep the current native config or connect the client to the AI Agent Switch proxy.
+- Custom provider setup must separate `openai-responses` from `openai-chat-compatible`.
+- The TUI supports client detect/show, provider edit/test/remove, model add/remove/default, and route basics.
+- The CLI supports provider management, client list/detect/show, single-client proxy connection, config validation, model switching, doctor, and proxy status.
+- `-y` / `--yes` skips confirmation only. It does not skip hard validation.
+- AI Agent Switch stores its own config as JSONC.
+- Native client config formats include JSON, JSONC, TOML, and YAML.
+- The local proxy supports retries and ordered failover.
+- Proxy commands include `proxy enable/disable/set/start/stop/status`.
+- Background proxy start is supported.
+- `provider test` respects the configured upstream network proxy.
+- Provider models can be added and removed.
+- Provider default models can be changed.
+- `model list` shows all switchable model targets.
+- Proxy default route/fallback chain is supported.
+- The proxy rewrites OpenAI-compatible request body `model` values according to routes.
+- The proxy exposes `/health`.
+- The proxy exposes `/v1/models`.
+- `proxy start` respects `proxy.enabled`.
+- JSON output is available for automation.
+- `config validate` includes both schema validation and cross-field semantic validation.
+- `use --dry-run` previews changes.
+- `use` / `use-all` remain advanced CLI paths for direct native provider/model writes.
+- `config schema` and shell completion are supported.
+- Common provider presets reduce setup cost.
+- The local `ai-agent-switch-proxy` provider preset is supported.
+- No SQLite or embedded database is used.
 
-## 第一版明确不做
+## Explicit Non-Goals
 
-- 不做 `init`。
-- 不做 `agent-switch tui`。
-- 不做 `backup` / `restore` 命令。
-- 不做统计、历史、token、费用、延迟、成功率报表。
-- 不接管 OpenClaw / Hermes 的 Gateway、channel、memory、cron、skills。
-- 不迁移用户所有历史配置。
+- No `init` command.
+- No `ai-agent-switch tui` command.
+- No `backup` / `restore` command.
+- No analytics, history, token, cost, latency, or success-rate reports.
+- No takeover of OpenClaw or Hermes Gateway, channel, memory, cron, or skills.
+- No full migration of all historical user config.
 
-## 支持客户端
+## Supported Clients
 
-| 客户端 | 第一版策略 |
+| Client | First-version strategy |
 |---|---|
-| Codex | 写入 `~/.codex/config.toml` 的 `model`、`model_provider`、`model_providers` |
-| Gemini CLI | 写入 `~/.gemini/settings.json` |
-| Qwen Code | 写入 `~/.qwen/settings.json` 的 `model.name`、`security.auth.selectedType`、`modelProviders` |
-| OpenClaw | 写入 `~/.openclaw/openclaw.json` 的默认模型和 provider |
-| Hermes Agent | 写入 `~/.hermes/config.yaml`，密钥可分离到 `.env` |
-| Crush | 写入 `.crush.json` / `crush.json` / XDG 配置 |
-| OpenCode | 写入 `.opencode.json`，不碰 session DB |
-| CowAgent | 写入 `~/CowAgent/config.json` 的 `model`、`bot_type` 和 provider API 字段 |
-| Claude Code | 写入 `~/.claude/settings.json` 的 `agentSwitch` 命名空间 |
+| Codex | Writes `model`, `model_provider`, and `model_providers` in `~/.codex/config.toml` |
+| Gemini CLI | Writes `~/.gemini/settings.json` |
+| Qwen Code | Writes `model.name`, `security.auth.selectedType`, and `modelProviders` in `~/.qwen/settings.json` |
+| OpenClaw | Writes default model and provider entries in `~/.openclaw/openclaw.json` |
+| Hermes Agent | Writes `~/.hermes/config.yaml`; secrets can be separated into `.env` |
+| Crush | Writes `.crush.json`, `crush.json`, or XDG config |
+| OpenCode | Writes `.opencode.json`; does not touch session databases |
+| CowAgent | Writes `model`, `bot_type`, and provider API fields in `~/CowAgent/config.json` |
+| Claude Code | Writes the `aiAgentSwitch` namespace in `~/.claude/settings.json` |

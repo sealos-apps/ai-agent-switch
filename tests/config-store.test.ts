@@ -6,7 +6,7 @@ import { ConfigStore } from "../src/config/store";
 
 describe("ConfigStore", () => {
   test("creates a default JSONC config lazily", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-config-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-config-"));
     try {
       const store = new ConfigStore({ homeDir: home });
       const config = await store.load();
@@ -21,7 +21,7 @@ describe("ConfigStore", () => {
   });
 
   test("preserves JSONC comments when patching providers", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-jsonc-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-jsonc-"));
     try {
       const store = new ConfigStore({ homeDir: home });
       await store.ensure();

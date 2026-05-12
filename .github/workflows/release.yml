@@ -79,7 +79,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: npm-${{ matrix.platform }}
-          path: dist/npm-packages/@agent-switch/${{ matrix.platform }}
+          path: dist/npm-packages/@ai-agent-switch/${{ matrix.platform }}
           if-no-files-found: error
 
   publish:
@@ -118,10 +118,10 @@ jobs:
           const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
           const version = packageJson.version;
           packageJson.optionalDependencies = {
-            "@agent-switch/linux-x64": version,
-            "@agent-switch/darwin-arm64": version,
-            "@agent-switch/darwin-x64": version,
-            "@agent-switch/windows-x64": version,
+            "@ai-agent-switch/linux-x64": version,
+            "@ai-agent-switch/darwin-arm64": version,
+            "@ai-agent-switch/darwin-x64": version,
+            "@ai-agent-switch/windows-x64": version,
           };
           fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
           NODE

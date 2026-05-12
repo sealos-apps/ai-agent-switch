@@ -1,9 +1,9 @@
 import { providerTypes } from "./schema";
 
-export function agentSwitchJsonSchema(): Record<string, unknown> {
+export function aiAgentSwitchJsonSchema(): Record<string, unknown> {
   return {
     $schema: "https://json-schema.org/draft/2020-12/schema",
-    title: "agent-switch config",
+    title: "AI Agent Switch config",
     type: "object",
     required: ["version", "clients", "providers", "routes", "proxy", "ui"],
     properties: {

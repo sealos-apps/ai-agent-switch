@@ -1,4 +1,4 @@
 #!/usr/bin/env node
 import { runCommand } from "./launcher.js";
 
-process.exit(runCommand("agent-switch"));
+process.exit(runCommand("ai-agent-switch"));

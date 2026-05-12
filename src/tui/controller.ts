@@ -1,10 +1,10 @@
-import type { AgentSwitchApp } from "../core/app";
+import type { AiAgentSwitchApp } from "../core/app";
 import type { ClientId } from "../clients";
 import { listProviderPresets } from "../providers/presets";
 import type { TuiCommand, TuiCommandResult, TuiData } from "./types";
 
 type TuiApp = Pick<
-  AgentSwitchApp,
+  AiAgentSwitchApp,
   | "addProvider"
   | "addProviderModel"
   | "addProviderPreset"
@@ -62,19 +62,19 @@ export async function loadTuiData(
 export async function executeTuiCommand(app: TuiApp, command: TuiCommand): Promise<TuiCommandResult> {
   if (command.type === "add-provider-preset") {
     const provider = await app.addProviderPreset(command.presetId);
-    return { data: await loadTuiData(app), message: { tone: "success", text: `已添加 provider ${provider.id}` } };
+    return { data: await loadTuiData(app), message: { tone: "success", text: `Added provider ${provider.id}` } };
   }
 
   if (command.type === "add-custom-provider") {
     const provider = await app.addProvider(command.provider);
-    return { data: await loadTuiData(app), message: { tone: "success", text: `已保存 provider ${provider.id}` } };
+    return { data: await loadTuiData(app), message: { tone: "success", text: `Saved provider ${provider.id}` } };
   }
 
   if (command.type === "remove-provider") {
     const removed = await app.removeProvider(command.providerId);
     return {
       data: await loadTuiData(app),
-      message: { tone: removed ? "success" : "warning", text: removed ? `已删除 provider ${command.providerId}` : `provider 不存在 ${command.providerId}` },
+      message: { tone: removed ? "success" : "warning", text: removed ? `Removed provider ${command.providerId}` : `Provider not found ${command.providerId}` },
     };
   }
 
@@ -84,7 +84,7 @@ export async function executeTuiCommand(app: TuiApp, command: TuiCommand): Promi
       data: await loadTuiData(app),
       message: {
         tone: result.ok ? "success" : "error",
-        text: result.ok ? `provider ${command.providerId} 测试通过` : `provider ${command.providerId} 测试失败：${result.issues.join("; ")}`,
+        text: result.ok ? `Provider ${command.providerId} test passed` : `Provider ${command.providerId} test failed: ${result.issues.join("; ")}`,
       },
     };
   }
@@ -111,7 +111,7 @@ export async function executeTuiCommand(app: TuiApp, command: TuiCommand): Promi
   if (command.type === "show-client") {
     const data = await loadTuiData(app, { clientId: command.clientId });
     const current = data.clientCurrent;
-    if (!current) return { data, message: { tone: "warning", text: `client 不存在 ${command.clientId}` } };
+    if (!current) return { data, message: { tone: "warning", text: `Client not found ${command.clientId}` } };
     return {
       data,
       message: {
@@ -123,17 +123,17 @@ export async function executeTuiCommand(app: TuiApp, command: TuiCommand): Promi
 
   if (command.type === "add-model") {
     const provider = await app.addProviderModel(command.providerId, command.modelId);
-    return { data: await loadTuiData(app), message: { tone: "success", text: `已添加模型 ${provider.id}/${command.modelId}` } };
+    return { data: await loadTuiData(app), message: { tone: "success", text: `Added model ${provider.id}/${command.modelId}` } };
   }
 
   if (command.type === "remove-model") {
     const provider = await app.removeProviderModel(command.providerId, command.modelId);
-    return { data: await loadTuiData(app), message: { tone: "success", text: `已删除模型 ${provider.id}/${command.modelId}` } };
+    return { data: await loadTuiData(app), message: { tone: "success", text: `Removed model ${provider.id}/${command.modelId}` } };
   }
 
   if (command.type === "apply-client") {
     await app.useClient({ clientId: command.clientId, target: command.target, yes: true });
-    return { data: await loadTuiData(app, { clientId: command.clientId }), message: { tone: "success", text: `已应用 ${command.target} 到 ${command.clientId}` } };
+    return { data: await loadTuiData(app, { clientId: command.clientId }), message: { tone: "success", text: `Applied ${command.target} to ${command.clientId}` } };
   }
 
   if (command.type === "apply-all") {
@@ -143,15 +143,15 @@ export async function executeTuiCommand(app: TuiApp, command: TuiCommand): Promi
     const skipped = result.results.filter((item) => item.status === "skipped").length;
     return {
       data: await loadTuiData(app),
-      message: { tone: failed > 0 ? "warning" : "success", text: `批量应用完成：${applied} applied, ${skipped} skipped, ${failed} failed` },
+      message: { tone: failed > 0 ? "warning" : "success", text: `Batch apply complete: ${applied} applied, ${skipped} skipped, ${failed} failed` },
     };
   }
 
-  if (command.type === "use-agent-switch-proxy") {
+  if (command.type === "use-ai-agent-switch-proxy") {
     await app.useClientProxy({ clientId: command.clientId, yes: true });
     return {
       data: await loadTuiData(app, { clientId: command.clientId }),
-      message: { tone: "success", text: `${command.clientId} 已使用 agent-switch proxy` },
+      message: { tone: "success", text: `${command.clientId} now uses ai-agent-switch proxy` },
     };
   }
 
@@ -159,7 +159,7 @@ export async function executeTuiCommand(app: TuiApp, command: TuiCommand): Promi
     await app.setProviderDefaultModel(command.providerId, command.modelId);
     return {
       data: await loadTuiData(app),
-      message: { tone: "success", text: `${command.providerId} 默认模型 ${command.modelId}` },
+      message: { tone: "success", text: `${command.providerId} default model ${command.modelId}` },
     };
   }
 

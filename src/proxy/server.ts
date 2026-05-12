@@ -1,8 +1,8 @@
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { AgentSwitchApp } from "../core/app";
-import type { AgentSwitchConfig, ProviderProfile, RouteCandidate } from "../config/schema";
+import { AiAgentSwitchApp } from "../core/app";
+import type { AiAgentSwitchConfig, ProviderProfile, RouteCandidate } from "../config/schema";
 import { routeWithFailover } from "./router";
 
 export type ProxyStartOptions = {
@@ -42,7 +42,7 @@ type ProxyModelEntry = {
 };
 
 export async function startProxy(options: ProxyStartOptions = {}): Promise<void> {
-  const app = new AgentSwitchApp(options);
+  const app = new AiAgentSwitchApp(options);
   const config = await app.loadConfig();
   assertProxyStartAllowed(config);
 
@@ -73,13 +73,13 @@ export async function startProxy(options: ProxyStartOptions = {}): Promise<void>
   process.once("SIGINT", () => void shutdown());
   process.once("SIGTERM", () => void shutdown());
 
-  console.log(`agent-switch proxy listening on http://${server.hostname}:${server.port}`);
+  console.log(`ai-agent-switch proxy listening on http://${server.hostname}:${server.port}`);
   await new Promise(() => undefined);
 }
 
-export function assertProxyStartAllowed(config: AgentSwitchConfig): void {
+export function assertProxyStartAllowed(config: AiAgentSwitchConfig): void {
   if (!config.proxy.enabled) {
-    throw new Error("Proxy is disabled. Run `agent-switch proxy enable` first.");
+    throw new Error("Proxy is disabled. Run `ai-agent-switch proxy enable` first.");
   }
   if (resolveProxyRouteCandidates(config).length === 0) {
     throw new Error("No providers configured. Add a provider before starting proxy.");
@@ -101,7 +101,7 @@ export function startProxyDaemon(spawn: ProxyDaemonSpawn = Bun.spawn as ProxyDae
 }
 
 export async function proxyStatus(options: ProxyStartOptions = {}): Promise<{ running: boolean; pid?: number; pidPath: string }> {
-  const app = new AgentSwitchApp(options);
+  const app = new AiAgentSwitchApp(options);
   const pidPath = join(app.store.configDir, "proxy.pid");
   if (!existsSync(pidPath)) return { running: false, pidPath };
   const pid = Number((await readFile(pidPath, "utf8")).trim());
@@ -165,7 +165,7 @@ export async function forwardProviderRequest(
 }
 
 export async function handleProxyRequest(
-  config: AgentSwitchConfig,
+  config: AiAgentSwitchConfig,
   request: Request,
   fetcher: ProxyFetch = fetch as ProxyFetch,
 ): Promise<Response> {
@@ -207,7 +207,7 @@ export async function handleProxyRequest(
   }
 }
 
-export function resolveProxyRouteCandidates(config: AgentSwitchConfig, preferred?: RouteCandidate): ProxyRouteCandidate[] {
+export function resolveProxyRouteCandidates(config: AiAgentSwitchConfig, preferred?: RouteCandidate): ProxyRouteCandidate[] {
   const configured = config.routes.default?.candidates ?? [];
   const candidates = configured.length > 0
     ? configured.flatMap((candidate) => resolveRouteCandidate(config, candidate) ?? [])
@@ -224,14 +224,14 @@ export function resolveProxyRouteCandidates(config: AgentSwitchConfig, preferred
   ];
 }
 
-function resolveRouteCandidate(config: AgentSwitchConfig, candidate: RouteCandidate): ProxyRouteCandidate | undefined {
+function resolveRouteCandidate(config: AiAgentSwitchConfig, candidate: RouteCandidate): ProxyRouteCandidate | undefined {
   const provider = config.providers[candidate.providerId];
   if (!provider) return undefined;
   if (!provider.models.some((model) => model.id === candidate.modelId)) return undefined;
   return { provider, modelId: candidate.modelId };
 }
 
-async function resolveRequestRouteCandidate(config: AgentSwitchConfig, request: Request): Promise<RouteCandidate | undefined> {
+async function resolveRequestRouteCandidate(config: AiAgentSwitchConfig, request: Request): Promise<RouteCandidate | undefined> {
   if (request.method === "GET" || request.method === "HEAD") return undefined;
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) return undefined;
@@ -244,7 +244,7 @@ async function resolveRequestRouteCandidate(config: AgentSwitchConfig, request: 
   return typeof model === "string" ? parseRouteModelRef(config, model) : undefined;
 }
 
-function parseRouteModelRef(config: AgentSwitchConfig, value: string): RouteCandidate | undefined {
+function parseRouteModelRef(config: AiAgentSwitchConfig, value: string): RouteCandidate | undefined {
   const slash = value.indexOf("/");
   if (slash <= 0) return undefined;
   const providerId = value.slice(0, slash);
@@ -264,7 +264,7 @@ function resolveForwardPath(basePath: string, incomingPath: string): string {
   return `${basePath}${path}`;
 }
 
-function resolveProxyModelEntries(config: AgentSwitchConfig): ProxyModelEntry[] {
+function resolveProxyModelEntries(config: AiAgentSwitchConfig): ProxyModelEntry[] {
   const routeCandidates = config.routes.default?.candidates ?? [];
   const entries = routeCandidates.length > 0
     ? routeCandidates.flatMap((candidate) => {

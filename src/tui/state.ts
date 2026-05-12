@@ -18,7 +18,7 @@ export function createTuiState(status?: Pick<AppStatus, "providers">): TuiState 
       clientDetail: 0,
     },
     activeTargetRef: firstProvider && firstModel ? `${firstProvider.id}/${firstModel.id}` : undefined,
-    message: { tone: "info", text: "↑/↓ 移动，Enter 进入，h 帮助，q 退出" },
+    message: { tone: "info", text: "↑/↓ move, Enter open, h help, q quit" },
   };
 }
 
@@ -45,11 +45,11 @@ export function reduceTuiState(state: TuiState, action: TuiStateAction, data: Tu
   }
   if (action.type === "select-active-model") {
     const target = selectedModelTarget(state, data);
-    if (!target) return { ...state, message: { tone: "warning", text: "没有可选择的模型" } };
+    if (!target) return { ...state, message: { tone: "warning", text: "No selectable model" } };
     return {
       ...state,
       activeTargetRef: target.ref,
-      message: { tone: "success", text: `当前模型 ${target.ref}` },
+      message: { tone: "success", text: `Current model ${target.ref}` },
     };
   }
   if (action.type === "move") {

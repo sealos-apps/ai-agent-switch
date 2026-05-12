@@ -1,216 +1,217 @@
-# npm 全平台可安装 CLI 设计
+# npm Installable CLI Distribution Design
 
-> **面向 AI 代理的工作者：** 本规格通过后，下一步应使用 `writing-plans` 生成实现计划，再按计划实现。
+> Worker note: this historical design was used to implement npm-first distribution.
 
-**目标：** 让 `agent-switch` 可以直接通过 `npm install` / `npm install -g` 在所有支持的平台上安装，并且安装后可直接运行 `agent-switch` 和 `as`，不再依赖 Bun 作为运行时。
+## Goal
 
-**架构：** 采用“一个根包 + 四个按平台拆分的二进制包”的 npm 分发结构。根包 `agent-switch` 只负责 Node 包装器和命令入口，按平台二进制包通过 `optionalDependencies` 自动安装对应平台的 standalone executable。GitHub Actions 负责在对应平台上构建二进制包、发布 npm 包，发布顺序是先平台包，后根包。
+Make `ai-agent-switch` installable through `npm install` and `npm install -g` on all supported platforms. After installation, users can run `ai-agent-switch` and `as` without installing Bun.
 
-**技术栈：** npm、Node.js ESM、Bun standalone executable、GitHub Actions、TypeScript、`spawnSync`、`npm publish`。
+## Architecture
 
----
+Use one root package plus four platform-specific binary packages.
 
-## 背景
+The root package `ai-agent-switch` contains only Node.js wrappers and npm metadata. Platform packages are installed through `optionalDependencies` and contain standalone executables. GitHub Actions builds platform packages on matching runners, publishes platform packages first, then publishes the root package.
 
-当前仓库里的 CLI 入口是 Bun-only：
+## Technology
 
-- `src/cli/main.ts` 直接依赖 Bun 运行时。
-- 现有本地构建和测试都围绕 Bun 展开。
-- 之前的发布方案是 GitHub Release 二进制下载。
+- npm
+- Node.js ESM
+- Bun standalone executables
+- GitHub Actions
+- TypeScript
+- `spawnSync`
+- `npm publish`
 
-这意味着用户如果只执行 `npm install agent-switch`，拿到的仍然只是开发源码包装，不能直接作为命令运行。为了满足“直接 npm 安装全平台可用”的目标，需要把发布形态切换成 npm 原生分发。
+## Context
 
-## 已确认决策
+The CLI source depends on the Bun runtime. A plain npm package containing source code would not provide a directly runnable global command. The distribution model must publish prebuilt standalone binaries while preserving npm-native installation.
 
-- 根包名保持为 `agent-switch`。
-- 平台二进制包使用 scoped package：
-  - `@agent-switch/linux-x64`
-  - `@agent-switch/darwin-arm64`
-  - `@agent-switch/darwin-x64`
-  - `@agent-switch/windows-x64`
-- 根包使用 `optionalDependencies` 依赖上述平台包。
-- 根包的 `bin` 只提供 Node 包装器，不再直接指向 Bun 编译产物。
-- 平台包只发布 standalone executable，不再发布源码 bundle。
-- 不添加任何“下载失败再去别处拉取”的 fallback 或 postinstall 下载逻辑。
-- 发布目标是 npm registry，不再把 GitHub Release 作为主要安装入口。
+## Confirmed Decisions
 
-## 方案取舍
+- Root package name: `ai-agent-switch`.
+- Platform packages:
+  - `@ai-agent-switch/linux-x64`
+  - `@ai-agent-switch/darwin-arm64`
+  - `@ai-agent-switch/darwin-x64`
+  - `@ai-agent-switch/windows-x64`
+- The root package uses `optionalDependencies` for platform packages.
+- Root package `bin` entries point to Node.js wrappers.
+- Platform packages publish standalone executables only.
+- No postinstall download.
+- No fallback download path.
+- npm registry is the primary installation path.
 
-### 方案 A：只保留 GitHub Release 二进制
+## Options
 
-优点：
+### Option A: GitHub Release binaries only
 
-- 构建链路简单。
-- 下载物是完整可执行文件。
+Pros:
 
-缺点：
+- Simple build flow.
+- Downloaded files are complete executables.
 
-- 不能满足 `npm install` 直接安装。
-- 用户路径更长，和当前需求冲突。
+Cons:
 
-### 方案 B：根包包装器 + `optionalDependencies` 平台二进制包
+- Does not satisfy npm installation.
+- Requires manual user download steps.
 
-优点：
+### Option B: Root wrapper package plus optional platform packages
 
-- `npm install` 和 `npm install -g` 都能直接得到命令。
-- 仍然保持每个平台只安装自己的二进制。
-- 不需要额外的网络下载逻辑。
-- 结构和 esbuild、swc 这类 npm 原生分发方式一致。
+Pros:
 
-缺点：
+- `npm install` and `npm install -g` work directly.
+- Each platform installs only its matching binary package.
+- No extra network download logic is needed.
+- This matches common npm native binary distribution patterns.
 
-- 需要新增根包包装器和平台包发布流程。
-- CI 需要先发布平台包，再发布根包。
+Cons:
 
-### 方案 C：postinstall 下载二进制
+- Requires wrapper code.
+- CI must publish platform packages before the root package.
 
-优点：
+### Option C: postinstall binary download
 
-- 仓库里只保留一个包。
+Pros:
 
-缺点：
+- Only one npm package is needed.
 
-- 需要额外的下载逻辑和环境判断。
-- 安装过程依赖外部网络，不稳定。
-- 容易引入用户不想要的 fallback。
+Cons:
 
-### 结论
+- Requires custom download logic.
+- Installation depends on extra network access.
+- Encourages fallback behavior that the project intentionally avoids.
 
-采用 **方案 B**。它最直接满足“npm 全平台安装”这个目标，同时不引入 fallback 下载链路。
+## Decision
 
-## 包结构
+Choose Option B. It satisfies global npm installation without introducing download fallback logic.
 
-### 根包 `agent-switch`
+## Package Structure
 
-根包只保留 Node 包装器和 npm 元数据：
+### Root Package
 
-- `bin/agent-switch.js`
+Root package contents:
+
+- `bin/launcher.js`
+- `bin/ai-agent-switch.js`
 - `bin/as.js`
-- `optionalDependencies` 指向四个平台包
-- `files` 只包含 `bin/`
+- `README.md`
+- `README_CN.md`
+- `package.json`
 
-包装器职责：
+Root wrapper responsibilities:
 
-- 根据当前 `process.platform` / `process.arch` 选出对应的平台包。
-- 解析平台包安装路径。
-- 直接 `spawnSync` 执行平台二进制。
-- 把参数、标准输入输出和退出码透传给目标二进制。
+- Detect the current `process.platform` / `process.arch`.
+- Map the runtime to the matching platform package.
+- Resolve the installed platform package path.
+- Execute the platform binary with `spawnSync`.
+- Forward argv, stdio, and exit status.
 
-包装器不做：
+Root wrapper non-goals:
 
-- 不做网络下载。
-- 不做降级安装。
-- 不做本地重编译。
-- 不在缺包时尝试任何 fallback。
+- No network download.
+- No fallback installation.
+- No local rebuild.
+- No implicit platform guessing beyond an explicit map.
 
-### 平台包
+### Platform Packages
 
-每个平台包都只包含当前平台的 standalone executable：
+Each platform package contains:
 
-- `agent-switch`
+- `ai-agent-switch`
 - `as`
 
-Windows 包对应文件使用 `.exe` 后缀。平台包的 `package.json` 会包含：
+Windows packages use `.exe` suffixes. Platform package manifests include:
 
-- `os` / `cpu` 限定
-- `bin` 映射
-- `files` 只包含可执行文件
-- `publishConfig.access = public`
+- `os`
+- `cpu`
+- `bin`
+- `files`
+- `publishConfig.access = "public"`
 
-## 构建与发布流程
+## Build and Publish Flow
 
-### 构建阶段
+### Build
 
-GitHub Actions 使用矩阵在四个平台上构建二进制包：
+GitHub Actions builds platform packages in a matrix:
 
 - `linux-x64`
 - `darwin-arm64`
 - `darwin-x64`
 - `windows-x64`
 
-每个平台的构建步骤：
+Each build:
 
-1. 检出指定 tag。
-2. 安装依赖。
-3. 跑测试和类型检查。
-4. 用 Bun 把 `src/cli/main.ts` 编译成 standalone executable。
-5. 组装平台包目录。
-6. 生成该平台的 `package.json` 和二进制文件。
+1. Checks out the target tag.
+2. Installs dependencies.
+3. Runs tests and typecheck.
+4. Compiles `src/cli/main.ts` into a standalone executable.
+5. Assembles the platform package directory.
+6. Writes package manifest and binaries.
 
-### 发布阶段
+### Publish
 
-发布顺序必须是：
+Publish order:
 
-1. 先发布四个平台包。
-2. 再发布根包 `agent-switch`。
+1. Publish all platform packages.
+2. Publish the root `ai-agent-switch` package.
 
-这样根包安装时，npm 才能顺利解析它的 `optionalDependencies`。
+This ensures npm can resolve root package `optionalDependencies` during installation.
 
-发布时使用 npm registry token，不再依赖 GitHub Release 资产。Workflow 只负责构建和发布 npm 包。
+## Wrapper Files
 
-## 包装器实现
+- `bin/launcher.js`: platform mapping, package path resolution, and process spawning.
+- `bin/ai-agent-switch.js`: command entry point for `ai-agent-switch`.
+- `bin/as.js`: command entry point for `as`.
 
-根包包装器建议拆成三个小文件：
+Implementation requirements:
 
-- `bin/launcher.js`：共享逻辑，负责平台映射、包路径解析和进程拉起。
-- `bin/agent-switch.js`：入口文件，调用共享逻辑并传入 `agent-switch`。
-- `bin/as.js`：入口文件，调用共享逻辑并传入 `as`。
+- Use ESM.
+- Use `createRequire(import.meta.url)` to resolve platform packages.
+- Use `spawnSync` or equivalent process spawning.
+- Preserve stdin/stdout/stderr.
+- Return the platform binary exit code.
+- Keep command and platform package mapping explicit.
 
-实现要求：
+## Build Script Responsibilities
 
-- 使用 ESM。
-- 通过 `createRequire(import.meta.url)` 解析平台包安装目录。
-- 用 `spawnSync` 或等价方式执行目标二进制。
-- 保持 stdin/stdout/stderr 透传。
-- 退出码直接跟随目标进程。
-- 命令名和平台包名映射写成显式表，不做隐式猜测。
+`scripts/build-npm-package.ts` builds one platform package:
 
-## 构建脚本职责
+- Accept platform, output directory, version, and optional entry point.
+- Compile a standalone executable with Bun.
+- Copy the executable to the `as` alias.
+- Add `.exe` suffix for Windows.
+- Write platform package `package.json`.
 
-`scripts/build-npm-package.ts` 负责单个平台二进制包的生成：
+The root wrapper does not need compilation and is published as JavaScript source.
 
-- 接收平台、输出目录、版本号等参数。
-- 调用 Bun 生成 standalone executable。
-- 复制 `agent-switch` 和 `as` 两个二进制文件。
-- Windows 目标生成 `.exe`。
-- 写出平台包 `package.json`。
+## README Requirements
 
-这个脚本只负责“单个平台包”。
-
-根包包装器不需要复杂构建，直接以源码形式发布即可。
-
-## README 更新
-
-README 需要补充 npm 安装方式：
+README must document:
 
 ```bash
-npm install -g agent-switch
+npm install -g ai-agent-switch
 ```
 
-并说明：
+It must also explain:
 
-- 安装后直接运行 `agent-switch`。
-- 也可以使用 `as`。
-- 支持平台由 npm 自动安装对应二进制包。
-- 这个安装方式不需要再手动下载 GitHub Release 资产。
+- Run `ai-agent-switch` after installation.
+- `as` is an alias.
+- npm installs the matching platform binary automatically.
+- Manual GitHub Release download is not required for npm users.
 
-## 非目标
+## Non-Goals
 
-本次不做这些事：
+- No postinstall download from GitHub or elsewhere.
+- No automatic upgrade system.
+- No code signing or notarization.
+- No CLI business logic changes.
+- No database, cache, or telemetry.
 
-- 不保留“npm 安装后自动从 GitHub 下载二进制”的 fallback。
-- 不做自动升级。
-- 不做代码签名或 notarization。
-- 不改 CLI 业务逻辑。
-- 不新增数据库、缓存或遥测。
+## Acceptance Criteria
 
-## 验收标准
-
-满足以下条件时，设计完成：
-
-1. `npm install agent-switch` 在四个平台上都会安装对应的二进制包。
-2. `npm install -g agent-switch` 后可直接运行 `agent-switch` 和 `as`。
-3. 平台二进制包仍然是 standalone executable，运行时不需要 Bun。
-4. Workflow 会先发布四个平台包，再发布根包。
-5. 仓库里没有新增任何下载 fallback 或 postinstall 拉取逻辑。
-6. README 明确写出 npm 安装命令和支持平台。
+1. `npm install ai-agent-switch` installs the matching platform binary package on supported platforms.
+2. `npm install -g ai-agent-switch` exposes `ai-agent-switch` and `as`.
+3. Platform binaries are standalone executables and do not require Bun.
+4. The workflow publishes platform packages before the root package.
+5. The repository adds no download fallback or postinstall fetch logic.
+6. README documents npm installation and supported command usage.

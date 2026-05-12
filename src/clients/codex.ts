@@ -36,7 +36,7 @@ export class CodexAdapter extends BaseClientAdapter {
     const file = before === undefined
       ? { path: this.configPath, after: stringifyTomlObject(config) }
       : { path: this.configPath, before, after: stringifyTomlObject(config) };
-    return { clientId: this.id, summary: `将 Codex 切换到 ${input.provider.id}/${input.modelId}`, files: [file] };
+    return { clientId: this.id, summary: `Switch Codex to ${input.provider.id}/${input.modelId}`, files: [file] };
   }
 
   async getCurrent(): Promise<ClientCurrentState> {

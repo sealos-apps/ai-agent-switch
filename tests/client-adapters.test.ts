@@ -16,7 +16,7 @@ const provider: ProviderProfile = {
 
 describe("client adapters", () => {
   test("qwen adapter patches settings.json without dropping unknown fields", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-qwen-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-qwen-"));
     try {
       await mkdir(join(home, ".qwen"), { recursive: true });
       await writeFile(join(home, ".qwen/settings.json"), JSON.stringify({ keep: true }, null, 2));
@@ -40,7 +40,7 @@ describe("client adapters", () => {
   });
 
   test("codex adapter patches TOML provider and current model", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-codex-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-codex-"));
     try {
       await mkdir(join(home, ".codex"), { recursive: true });
       await writeFile(join(home, ".codex/config.toml"), `approval_policy = "never"\n`);
@@ -63,7 +63,7 @@ describe("client adapters", () => {
   });
 
   test("codex adapter writes responses wire api for explicit OpenAI Responses providers", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-codex-openai-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-codex-openai-"));
     try {
       await mkdir(join(home, ".codex"), { recursive: true });
       const codex = createClientAdapters({ homeDir: home, cwd: home }).get("codex")!;
@@ -87,7 +87,7 @@ describe("client adapters", () => {
   });
 
   test("hermes adapter writes config.yaml and .env separation", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-hermes-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-hermes-"));
     try {
       await mkdir(join(home, ".hermes"), { recursive: true });
       await writeFile(join(home, ".hermes/config.yaml"), "theme: dark\n");
@@ -110,7 +110,7 @@ describe("client adapters", () => {
   });
 
   test("hermes adapter strips /v1 from anthropic base URL", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-hermes-anthropic-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-hermes-anthropic-"));
     try {
       const adapters = createClientAdapters({ homeDir: home, cwd: home });
       const hermes = adapters.get("hermes")!;

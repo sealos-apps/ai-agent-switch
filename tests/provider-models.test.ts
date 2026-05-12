@@ -2,13 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { AgentSwitchApp } from "../src/core/app";
+import { AiAgentSwitchApp } from "../src/core/app";
 
 describe("provider model management", () => {
   test("adds and removes models from an existing provider", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-provider-models-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-provider-models-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       await app.addProvider({
         id: "openrouter",
         name: "OpenRouter",
@@ -28,9 +28,9 @@ describe("provider model management", () => {
   });
 
   test("sets provider default model only when model exists", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-provider-default-model-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-provider-default-model-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       await app.addProvider({
         id: "openrouter",
         name: "OpenRouter",
@@ -49,9 +49,9 @@ describe("provider model management", () => {
   });
 
   test("removing a provider model removes matching route candidates", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-provider-model-route-clean-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-provider-model-route-clean-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       await app.addProvider({
         id: "openrouter",
         name: "OpenRouter",
@@ -73,9 +73,9 @@ describe("provider model management", () => {
   });
 
   test("removing a provider removes matching route candidates", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-provider-route-clean-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-provider-route-clean-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       await app.addProvider({
         id: "first",
         name: "First",

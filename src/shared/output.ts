@@ -5,7 +5,7 @@ import type { ClientId, PatchPlan } from "../clients";
 
 export function printProviders(providers: ProviderProfile[]): void {
   if (providers.length === 0) {
-    console.log(pc.dim("暂无 provider。使用 provider add 添加。"));
+    console.log(pc.dim("No providers yet. Add one with provider add."));
     return;
   }
 
@@ -19,7 +19,7 @@ export function printProviders(providers: ProviderProfile[]): void {
 }
 
 export function printStatus(status: AppStatus): void {
-  console.log(pc.bold("agent-switch status"));
+  console.log(pc.bold("AI Agent Switch status"));
   console.log(`${pc.dim("config:")} ${status.configPath}`);
   console.log(`${pc.dim("state:")} ${status.statePath}`);
   console.log(`${pc.dim("proxy:")} ${status.proxy.enabled ? pc.green("enabled") : pc.yellow("disabled")} ${status.proxy.host}:${status.proxy.port}`);

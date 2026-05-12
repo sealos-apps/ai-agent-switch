@@ -7,7 +7,7 @@ const cliPath = join(import.meta.dir, "..", "src", "cli", "main.ts");
 
 describe("CLI use-all", () => {
   test("use-all --dry-run --json returns batch plan", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-cli-use-all-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-use-all-"));
     try {
       await run(home, "provider", "add", "--id", "openrouter", "--name", "OpenRouter", "--type", "openai-compatible", "--base-url", "https://openrouter.ai/api/v1", "--model", "qwen/qwen3-coder");
       const output = await run(home, "use-all", "openrouter/qwen/qwen3-coder", "--dry-run", "--json");
@@ -22,7 +22,7 @@ describe("CLI use-all", () => {
   });
 
   test("use-all -y applies supported client configs", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-cli-use-all-apply-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-use-all-apply-"));
     try {
       await run(home, "provider", "add", "--id", "openrouter", "--name", "OpenRouter", "--type", "openai-compatible", "--base-url", "https://openrouter.ai/api/v1", "--model", "qwen/qwen3-coder");
       await run(home, "use-all", "openrouter/qwen/qwen3-coder", "-y");
@@ -37,7 +37,7 @@ describe("CLI use-all", () => {
 
 async function run(home: string, ...args: string[]): Promise<string> {
   const proc = Bun.spawn(["bun", cliPath, ...args], {
-    env: { ...process.env, HOME: home, AGENT_SWITCH_HOME: join(home, ".agent-switch") },
+    env: { ...process.env, HOME: home, AI_AGENT_SWITCH_HOME: join(home, ".ai-agent-switch") },
     stdout: "pipe",
     stderr: "pipe",
   });

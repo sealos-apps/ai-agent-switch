@@ -118,13 +118,13 @@ const presetDefinitions: PresetDefinition[] = [
     description: "Local LM Studio OpenAI-compatible endpoint.",
   },
   {
-    id: "agent-switch-proxy",
-    name: "agent-switch Proxy",
+    id: "ai-agent-switch-proxy",
+    name: "AI Agent Switch Proxy",
     type: "openai-chat-compatible",
     baseUrl: "http://127.0.0.1:17890/v1",
-    models: ["agent-switch/default"],
-    defaultModel: "agent-switch/default",
-    description: "Local agent-switch proxy endpoint.",
+    models: ["ai-agent-switch/default"],
+    defaultModel: "ai-agent-switch/default",
+    description: "Local ai-agent-switch proxy endpoint.",
   },
 ];
 

@@ -1,18 +1,18 @@
-# agent-switch Architecture
+# AI Agent Switch Architecture
 
-## 核心分层
+## Core Concepts
 
-`agent-switch` 内部必须区分五个概念：
+AI Agent Switch keeps five concepts separate:
 
-- `Client`：外部 AI 编程客户端，例如 Codex、Qwen、Gemini、Hermes。
-- `Provider`：模型供应商和 API endpoint，例如 OpenRouter、DeepSeek、OpenAI Responses、OpenAI Chat Completions 兼容 endpoint。
-- `Model`：具体模型 ID，允许包含斜杠，例如 `qwen/qwen3-coder`。
-- `ClientAdapter`：把通用 provider/model 写入客户端原生配置。
-- `ProxyRuntime`：可选的本地 HTTP 代理，负责重试和 failover。
+- `Client`: an external AI coding client such as Codex, Qwen Code, Gemini CLI, Hermes, OpenClaw, Crush, OpenCode, CowAgent, or Claude Code.
+- `Provider`: a model provider and API endpoint such as OpenRouter, DeepSeek, OpenAI Responses API, or an OpenAI Chat Completions-compatible endpoint.
+- `Model`: a concrete model ID. Model IDs may contain slashes, for example `qwen/qwen3-coder`.
+- `ClientAdapter`: the component that writes a generic provider/model choice into a client's native config format.
+- `ProxyRuntime`: the optional local HTTP proxy that handles retries, failover, route selection, and model rewriting.
 
-## ClientAdapter 接口
+## ClientAdapter Interface
 
-每个客户端适配器实现：
+Each client adapter implements this shape:
 
 ```ts
 interface ClientAdapter {
@@ -25,34 +25,34 @@ interface ClientAdapter {
 }
 ```
 
-写入分两步：
+Writes happen in two steps:
 
-1. `planApply()` 只生成 patch plan，不写文件。
-2. `apply()` 执行原子写入。
+1. `planApply()` creates a patch plan without writing files.
+2. `apply()` performs the atomic write.
 
-这样 `-y` 可以跳过交互确认，但不能跳过校验和变更计划。
+This lets `-y` skip interactive confirmation without skipping validation or patch planning.
 
-## 配置文件
+## Configuration Files
 
-`agent-switch` 自身配置：
+AI Agent Switch stores its own state here:
 
 ```text
-~/.agent-switch/config.jsonc
-~/.agent-switch/state.jsonc
+~/.ai-agent-switch/config.jsonc
+~/.ai-agent-switch/state.jsonc
 ```
 
-`config.jsonc` 保存长期配置。`state.jsonc` 预留给当前运行态，不保存统计和历史。
+`config.jsonc` stores long-lived configuration. `state.jsonc` stores runtime state only.
 
-当前 `state.jsonc` 只保存：
+Current runtime state includes:
 
-- 最近一次切换的客户端、provider、model 和时间。
-- 代理进程 PID、启动时间和最近错误。
+- Last switched client, provider, model, and timestamp.
+- Proxy process PID, start time, and last error.
 
-它不保存请求历史、token、费用、延迟或成功率。
+It does not store request history, request bodies, token usage, cost, latency, or success-rate data.
 
-## 自动化接口
+## Automation Interface
 
-CLI 的面向脚本接口使用 JSON 输出，不引入数据库或后台 API：
+Script-friendly commands use JSON output instead of a database or background API:
 
 - `status --json`
 - `doctor --json`
@@ -63,15 +63,15 @@ CLI 的面向脚本接口使用 JSON 输出，不引入数据库或后台 API：
 - `use-all --dry-run --json`
 - `config schema`
 
-## TUI 分层
+## TUI Layers
 
-TUI 是默认人工入口，但不直接复制业务逻辑。它分为三层：
+The TUI is the default human entry point, but it does not duplicate business logic. It has three layers:
 
-- `state`：纯状态机，负责主菜单、子菜单、选择位置、client detail 和消息。
-- `render`：纯渲染，输入 TUI state 和数据快照，输出 terminal frame string。
-- `controller`：唯一允许调用 `AgentSwitchApp` 的 TUI 副作用层。
+- `state`: pure state machine for the main menu, submenus, selections, client detail, and messages.
+- `render`: pure rendering from TUI state and data snapshot to a terminal frame string.
+- `controller`: the only TUI layer allowed to call `AiAgentSwitchApp`.
 
-首页只展示核心管理对象：
+The home screen shows only core management objects:
 
 ```text
 Clients
@@ -79,62 +79,67 @@ Providers
 Models
 ```
 
-主导航使用 `↑` / `↓`、`Enter`、`Esc`、`h` 和 `q`。TUI 可以调用 client detect/show/use-proxy、provider preset/custom/edit/test/remove、model add/remove/default 和 route 配置等现有应用服务，但 provider/model/client 的校验仍然由 `AgentSwitchApp` 和各 adapter 负责。
+Main navigation uses `↑` / `↓`, `Enter`, `Esc`, `h`, and `q`. The TUI can call existing app services such as client detect/show/use-proxy, provider preset/custom/edit/test/remove, model add/remove/default, and route configuration. Provider/model/client validation still stays in `AiAgentSwitchApp` and the adapters.
 
-## Provider Type
+## Provider Types
 
-OpenAI 相关 provider type 明确拆成两条 wire API：
+OpenAI-related provider types are split by wire API:
 
-- `openai-responses`：OpenAI Responses API。
-- `openai-chat-compatible`：OpenAI Chat Completions 兼容接口。
+- `openai-responses`: OpenAI Responses API.
+- `openai-chat-compatible`: OpenAI Chat Completions-compatible API.
 
-旧值 `openai` 和 `openai-compatible` 作为兼容别名继续接受，分别归一到 `openai-responses` 和 `openai-chat-compatible`。Codex 当前只接受 `wire_api = "responses"`，所以 Codex adapter 会把可接入 Codex 的 OpenAI 相关 provider 写成 responses wire API；其他客户端按各自原生配置映射。
+Legacy values remain accepted:
+
+- `openai` normalizes to `openai-responses`.
+- `openai-compatible` normalizes to `openai-chat-compatible`.
+
+Codex currently expects `wire_api = "responses"`, so the Codex adapter maps OpenAI-related providers that can be used by Codex to the responses wire API. Other clients use their own native config mappings.
 
 ## Provider Presets
 
-Provider preset 是内置的常见供应商模板，用来减少手写 baseUrl/type/model 的成本。
+Provider presets are built-in templates for common providers. They reduce the amount of handwritten `baseUrl`, `type`, and model configuration.
 
-Preset 只生成普通 `ProviderProfile`，不会引入隐藏状态；用户仍然可以用 `provider edit`、`provider model-add` 和 JSONC 手动修改。
+A preset only creates a normal `ProviderProfile`. It does not create hidden state. Users can still edit it with `provider edit`, add models with `provider model-add`, or edit the JSONC config manually.
 
-`agent-switch-proxy` preset 是特殊的本地代理模板，但仍然落盘为普通 `openai-chat-compatible` provider：
+The `ai-agent-switch-proxy` preset is a local proxy template, but it is still stored as a regular `openai-chat-compatible` provider:
 
 ```text
 baseUrl: http://127.0.0.1:17890/v1
-model: agent-switch/default
+model: ai-agent-switch/default
 ```
 
-## 配置校验
+## Validation
 
-配置校验分两层：
+Configuration validation has two layers:
 
-- Schema 校验：确认 JSONC 结构、字段类型、provider 类型和端口范围。
-- 语义校验：确认 provider map key 与 `provider.id` 一致、`defaultModel` 存在、route candidate 指向存在的 provider/model，且没有重复候选。
+- Schema validation checks JSONC structure, field types, provider types, and port ranges.
+- Semantic validation checks that provider map keys match `provider.id`, `defaultModel` exists, route candidates point to existing provider/model pairs, and route candidates are not duplicated.
 
-## 代理设计
+## Proxy Design
 
-代理默认监听：
+The proxy listens on:
 
 ```text
 127.0.0.1:17890
 ```
 
-上游网络代理默认参考：
+The default upstream network proxy is:
 
 ```text
 http://127.0.0.1:7890
 ```
 
-代理路由策略第一版只做：
+The first proxy version supports:
 
-- 单请求重试。
-- 有序 provider failover。
-- 默认 route/fallback 链。
-- OpenAI-compatible JSON 请求体 `model` 改写。
-- 请求体 `model` 为 `<provider>/<model>` 时，优先路由到该 provider/model。
-- 流式响应透传。
-- 后台进程 PID 状态。
-- `/health` 健康检查端点。
-- `/v1/models` OpenAI-compatible 模型列表端点。
-- `proxy.enabled` 启动开关。
+- Per-request retries.
+- Ordered provider failover.
+- Default route/fallback chain.
+- OpenAI-compatible JSON request body `model` rewriting.
+- Direct routing when request body `model` is a valid `<provider>/<model>` value.
+- Streaming response passthrough.
+- Background process PID status.
+- `/health` endpoint.
+- `/v1/models` OpenAI-compatible model list endpoint.
+- `proxy.enabled` start gate.
 
-不做统计、不写请求历史、不保存请求正文。
+It does not collect analytics, write request history, or store request bodies.

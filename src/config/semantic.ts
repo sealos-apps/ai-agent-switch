@@ -1,6 +1,6 @@
-import type { AgentSwitchConfig, ValidationResult } from "./schema";
+import type { AiAgentSwitchConfig, ValidationResult } from "./schema";
 
-export function validateConfigSemantics(config: AgentSwitchConfig): ValidationResult {
+export function validateConfigSemantics(config: AiAgentSwitchConfig): ValidationResult {
   const issues: string[] = [];
 
   for (const [providerKey, provider] of Object.entries(config.providers)) {

@@ -21,26 +21,26 @@ export function completionScript(shell: string): string {
 }
 
 function zshCompletion(): string {
-  return `#compdef agent-switch as
+  return `#compdef ai-agent-switch as
 
-_agent_switch() {
+_ai_agent_switch() {
   local -a commands
   commands=(${commands.map((command) => `"${command}:${command}"`).join(" ")})
   _describe 'command' commands
 }
 
-compdef _agent_switch agent-switch
-compdef _agent_switch as
+compdef _ai_agent_switch ai-agent-switch
+compdef _ai_agent_switch as
 `;
 }
 
 function bashCompletion(): string {
-  return `_agent_switch_complete() {
+  return `_ai_agent_switch_complete() {
   local cur="\${COMP_WORDS[COMP_CWORD]}"
   COMPREPLY=( $(compgen -W "${commands.join(" ")}" -- "$cur") )
 }
 
-complete -F _agent_switch_complete agent-switch
-complete -F _agent_switch_complete as
+complete -F _ai_agent_switch_complete ai-agent-switch
+complete -F _ai_agent_switch_complete as
 `;
 }

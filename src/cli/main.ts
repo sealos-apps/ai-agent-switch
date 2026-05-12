@@ -1,18 +1,18 @@
 #!/usr/bin/env bun
 import { cac } from "cac";
 import pc from "picocolors";
-import { AgentSwitchApp } from "../core/app";
+import { AiAgentSwitchApp } from "../core/app";
 import { providerTypeLabels, selectableProviderTypes, type ProviderProfile } from "../config/schema";
 import { parseClientId, printDoctor, printPatchPlan, printProviders, printStatus, printValidation } from "../shared/output";
 import { confirm } from "../shared/prompt";
 import { runTui } from "../tui/app";
 import { proxyStatus, startProxy, startProxyDaemon, stopProxy } from "../proxy/server";
-import { agentSwitchJsonSchema } from "../config/json-schema";
+import { aiAgentSwitchJsonSchema } from "../config/json-schema";
 import { completionScript } from "./completion";
 import { getProviderPreset, listProviderPresets } from "../providers/presets";
 
-const cli = cac("agent-switch");
-const app = new AgentSwitchApp();
+const cli = cac("ai-agent-switch");
+const app = new AiAgentSwitchApp();
 
 cli.help();
 cli.version("0.1.0");
@@ -22,8 +22,8 @@ if (process.argv.slice(2).length === 0) {
   process.exit(0);
 }
 
-cli.command("status", "显示当前状态")
-  .option("--json", "输出 JSON")
+cli.command("status", "Show current status")
+  .option("--json", "Output JSON")
   .action(async (options) => {
     const status = await app.status();
     if (options.json) {
@@ -33,8 +33,8 @@ cli.command("status", "显示当前状态")
     printStatus(status);
   });
 
-cli.command("doctor", "检查配置和客户端状态")
-  .option("--json", "输出 JSON")
+cli.command("doctor", "Check configuration and client status")
+  .option("--json", "Output JSON")
   .action(async (options) => {
     const report = await app.doctor();
     if (options.json) {
@@ -44,8 +44,8 @@ cli.command("doctor", "检查配置和客户端状态")
     printDoctor(report);
   });
 
-cli.command("config <action>", "配置命令：path / validate / schema")
-  .option("--json", "输出 JSON")
+cli.command("config <action>", "Configuration commands: path / validate / schema")
+  .option("--json", "Output JSON")
   .action(async (action: string, options) => {
   if (action === "path") {
     console.log(await app.configPath());
@@ -62,16 +62,16 @@ cli.command("config <action>", "配置命令：path / validate / schema")
     return;
   }
   if (action === "schema") {
-    console.log(JSON.stringify(agentSwitchJsonSchema(), null, 2));
+    console.log(JSON.stringify(aiAgentSwitchJsonSchema(), null, 2));
     return;
   }
   throw new Error(`Unsupported config action: ${action}`);
 });
 
-cli.command("client <action> [client]", "客户端命令：list / detect / show / use-proxy")
-  .option("--json", "输出 JSON")
-  .option("--dry-run", "只输出变更计划，不写入客户端配置")
-  .option("-y, --yes", "跳过交互确认，但不跳过硬校验")
+cli.command("client <action> [client]", "Client commands: list / detect / show / use-proxy")
+  .option("--json", "Output JSON")
+  .option("--dry-run", "Print the change plan without writing client config")
+  .option("-y, --yes", "Skip interactive confirmation, but keep hard validation")
   .action(async (action: string, client: string | undefined, options) => {
     if (action === "list") {
       const clients = await app.listClients();
@@ -122,36 +122,36 @@ cli.command("client <action> [client]", "客户端命令：list / detect / show 
       }
       printPatchPlan(result.plan);
       if (options.dryRun) {
-        console.log(pc.yellow("dry-run：未写入客户端配置"));
+        console.log(pc.yellow("dry-run: client config was not written"));
         return;
       }
       if (result.requiresConfirmation) {
-        if (!(await confirm("应用以上配置变更？"))) {
-          console.log(pc.yellow("已取消，未写入客户端配置"));
+        if (!(await confirm("Apply these configuration changes?"))) {
+          console.log(pc.yellow("Canceled; client config was not written"));
           return;
         }
         await app.useClientProxy({ clientId, yes: true });
-        console.log(pc.green("OK 已应用"));
+        console.log(pc.green("OK applied"));
         return;
       }
-      console.log(pc.green("OK 已应用"));
+      console.log(pc.green("OK applied"));
       return;
     }
     throw new Error(`Unsupported client action: ${action}`);
   });
 
 cli
-  .command("provider <action> [id] [value]", "provider 命令：list / show / add / edit / remove / test / model-add / model-remove")
+  .command("provider <action> [id] [value]", "Provider commands: list / show / add / edit / remove / test / model-add / model-remove")
   .option("--id <id>", "provider id")
-  .option("--name <name>", "显示名称")
-  .option("--type <type>", `provider 类型：${selectableProviderTypes.map((type) => `${type} (${providerTypeLabels[type]})`).join(", ")}`)
+  .option("--name <name>", "Display name")
+  .option("--type <type>", `Provider type: ${selectableProviderTypes.map((type) => `${type} (${providerTypeLabels[type]})`).join(", ")}`)
   .option("--base-url <url>", "OpenAI-compatible base URL")
-  .option("--api-key-env <name>", "API key 环境变量名")
-  .option("--api-key <key>", "内联 API key，不推荐")
-  .option("--model <model>", "模型 ID，可重复", { default: [] })
-  .option("--default-model <model>", "provider 默认模型")
-  .option("--json", "输出 JSON")
-  .option("-y, --yes", "跳过确认")
+  .option("--api-key-env <name>", "API key environment variable name")
+  .option("--api-key <key>", "Inline API key, not recommended")
+  .option("--model <model>", "Model ID, repeatable", { default: [] })
+  .option("--default-model <model>", "Provider default model")
+  .option("--json", "Output JSON")
+  .option("-y, --yes", "Skip confirmation")
   .action(async (action: string, id: string | undefined, value: string | undefined, options) => {
     if (action === "list") {
       const providers = await app.listProviders(true);
@@ -189,7 +189,7 @@ cli
         console.log(JSON.stringify(provider, null, 2));
         return;
       }
-      console.log(`${pc.green("OK")} provider preset ${id} 已保存为 ${provider.id}`);
+      console.log(`${pc.green("OK")} provider preset ${id} saved as ${provider.id}`);
       return;
     }
     if (action === "show") {
@@ -202,7 +202,7 @@ cli
     if (action === "add") {
       const provider = providerFromOptions(options);
       await app.addProvider(provider);
-      console.log(`${pc.green("OK")} provider ${provider.id} 已保存`);
+      console.log(`${pc.green("OK")} provider ${provider.id} saved`);
       return;
     }
     if (action === "model-add") {
@@ -232,14 +232,14 @@ cli
       if (!current) throw new Error(`Provider not found: ${id}`);
       const next = providerFromOptions({ ...options, id, name: options.name ?? current.name, type: options.type ?? current.type }, current);
       await app.addProvider(next);
-      console.log(`${pc.green("OK")} provider ${id} 已更新`);
+      console.log(`${pc.green("OK")} provider ${id} updated`);
       return;
     }
     if (action === "remove") {
       if (!id) throw new Error("Missing provider id");
-      if (!options.yes && !(await confirm(`删除 provider ${id}？`))) return;
+      if (!options.yes && !(await confirm(`Remove provider ${id}?`))) return;
       const removed = await app.removeProvider(id);
-      console.log(removed ? `${pc.green("OK")} 已删除 ${id}` : `${pc.yellow("MISS")} provider 不存在`);
+      console.log(removed ? `${pc.green("OK")} removed ${id}` : `${pc.yellow("MISS")} provider not found`);
       return;
     }
     if (action === "test") {
@@ -250,8 +250,8 @@ cli
     throw new Error(`Unsupported provider action: ${action}`);
   });
 
-cli.command("model <action>", "模型命令：list")
-  .option("--json", "输出 JSON")
+cli.command("model <action>", "Model commands: list")
+  .option("--json", "Output JSON")
   .action(async (action: string, options) => {
     if (action === "list") {
       const models = await app.listModelTargets();
@@ -260,7 +260,7 @@ cli.command("model <action>", "模型命令：list")
         return;
       }
       if (models.length === 0) {
-        console.log(pc.dim("暂无模型。使用 provider add 或 provider preset-add 添加。"));
+        console.log(pc.dim("No models yet. Add one with provider add or provider preset-add."));
         return;
       }
       for (const model of models) {
@@ -276,10 +276,10 @@ cli.command("model <action>", "模型命令：list")
   });
 
 cli
-  .command("use <client> <target>", "高级：直接写入客户端原生 provider/model，例如 qwen openrouter/qwen/qwen3-coder")
-  .option("--dry-run", "只输出变更计划，不写入客户端配置")
-  .option("--json", "输出 JSON")
-  .option("-y, --yes", "跳过交互确认，但不跳过硬校验")
+  .command("use <client> <target>", "Advanced: write native provider/model config directly, for example qwen openrouter/qwen/qwen3-coder")
+  .option("--dry-run", "Print the change plan without writing client config")
+  .option("--json", "Output JSON")
+  .option("-y, --yes", "Skip interactive confirmation, but keep hard validation")
   .action(async (client: string, target: string, options) => {
     const result = await app.useClient({ clientId: parseClientId(client), target, yes: Boolean(options.yes) && !options.dryRun });
     if (options.json) {
@@ -288,26 +288,26 @@ cli
     }
     printPatchPlan(result.plan);
     if (options.dryRun) {
-      console.log(pc.yellow("dry-run：未写入客户端配置"));
+      console.log(pc.yellow("dry-run: client config was not written"));
       return;
     }
     if (result.requiresConfirmation) {
-      if (!(await confirm("应用以上配置变更？"))) {
-        console.log(pc.yellow("已取消，未写入客户端配置"));
+      if (!(await confirm("Apply these configuration changes?"))) {
+        console.log(pc.yellow("Canceled; client config was not written"));
         return;
       }
       await app.useClient({ clientId: parseClientId(client), target, yes: true });
-      console.log(pc.green("OK 已应用"));
+      console.log(pc.green("OK applied"));
       return;
     }
-    console.log(pc.green("OK 已应用"));
+    console.log(pc.green("OK applied"));
   });
 
 cli
-  .command("use-all <target>", "高级：批量直接写入所有支持客户端的原生 provider/model")
-  .option("--dry-run", "只输出变更计划，不写入客户端配置")
-  .option("--json", "输出 JSON")
-  .option("-y, --yes", "跳过交互确认，但不跳过硬校验")
+  .command("use-all <target>", "Advanced: write native provider/model config directly to all supported clients")
+  .option("--dry-run", "Print the change plan without writing client config")
+  .option("--json", "Output JSON")
+  .option("-y, --yes", "Skip interactive confirmation, but keep hard validation")
   .action(async (target: string, options) => {
     const result = await app.useAllClients({ target, yes: Boolean(options.yes) && !options.dryRun });
     if (options.json) {
@@ -332,19 +332,19 @@ cli
     }
 
     if (!options.yes || options.dryRun) {
-      console.log(pc.yellow("未写入或未完全写入。使用 -y 应用所有 planned 项。"));
+      console.log(pc.yellow("Nothing was written, or not all items were written. Use -y to apply all planned items."));
     }
   });
 
-cli.command("current", "显示所有客户端当前 provider/model").action(async () => {
+cli.command("current", "Show current provider/model for all clients").action(async () => {
   const status = await app.status();
   for (const client of status.clients) {
     console.log(`${pc.cyan(client.clientId)} ${client.providerId ?? "-"} ${client.modelId ?? "-"}`);
   }
 });
 
-cli.command("route <action> [target]", "路由命令：list / set-default / add-fallback / remove / clear")
-  .option("--json", "输出 JSON")
+cli.command("route <action> [target]", "Route commands: list / set-default / add-fallback / remove / clear")
+  .option("--json", "Output JSON")
   .action(async (action: string, target: string | undefined, options) => {
     if (action === "list") {
       const route = (await app.loadConfig()).routes.default?.candidates ?? [];
@@ -353,7 +353,7 @@ cli.command("route <action> [target]", "路由命令：list / set-default / add-
         return;
       }
       if (route.length === 0) {
-        console.log(pc.dim("默认路由未配置。代理会按 provider 默认模型或第一个模型路由。"));
+        console.log(pc.dim("Default route is not configured. The proxy will route by provider default model or first model."));
         return;
       }
       route.forEach((candidate, index) => {
@@ -388,21 +388,21 @@ cli.command("route <action> [target]", "路由命令：list / set-default / add-
   throw new Error(`Unsupported route action: ${action}`);
   });
 
-cli.command("completion <shell>", "输出 shell completion：zsh / bash").action((shell: string) => {
+cli.command("completion <shell>", "Output shell completion: zsh / bash").action((shell: string) => {
   console.log(completionScript(shell));
 });
 
-cli.command("proxy <action>", "代理命令：start / stop / status / enable / disable / set")
-  .option("--daemon", "后台启动代理")
-  .option("--foreground", "前台启动代理")
-  .option("--force", "忽略 proxy.enabled 配置，直接前台启动")
-  .option("--host <host>", "代理监听地址")
-  .option("--port <port>", "代理监听端口")
-  .option("--upstream-proxy <url>", "上游网络代理，例如 http://127.0.0.1:7890")
-  .option("--retry <enabled>", "是否启用重试：true / false")
-  .option("--max-attempts <n>", "最大重试次数")
-  .option("--failover <enabled>", "是否启用自动切换：true / false")
-  .option("--json", "输出 JSON")
+cli.command("proxy <action>", "Proxy commands: start / stop / status / enable / disable / set")
+  .option("--daemon", "Start proxy in the background")
+  .option("--foreground", "Start proxy in the foreground")
+  .option("--force", "Ignore proxy.enabled and start in the foreground")
+  .option("--host <host>", "Proxy listen host")
+  .option("--port <port>", "Proxy listen port")
+  .option("--upstream-proxy <url>", "Upstream network proxy, for example http://127.0.0.1:7890")
+  .option("--retry <enabled>", "Enable retry: true / false")
+  .option("--max-attempts <n>", "Maximum retry attempts")
+  .option("--failover <enabled>", "Enable automatic failover: true / false")
+  .option("--json", "Output JSON")
   .action(async (action: string, options) => {
   if (action === "start") {
     if (options.force) await app.updateProxyConfig({ enabled: true });
@@ -416,7 +416,7 @@ cli.command("proxy <action>", "代理命令：start / stop / status / enable / d
   }
   if (action === "stop") {
     const stopped = await stopProxy();
-    console.log(stopped ? pc.green("OK 已发送停止信号") : pc.yellow("没有正在运行的 agent-switch proxy"));
+    console.log(stopped ? pc.green("OK stop signal sent") : pc.yellow("No ai-agent-switch proxy is running"));
     return;
   }
   if (action === "status") {

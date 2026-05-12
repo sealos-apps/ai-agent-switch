@@ -1,4 +1,4 @@
-import type { AgentSwitchApp, AppStatus } from "../core/app";
+import type { AiAgentSwitchApp, AppStatus } from "../core/app";
 import { normalizeProviderType, providerTypeLabels, selectableProviderTypes, type ProviderProfile } from "../config/schema";
 import { executeTuiCommand, loadTuiData } from "./controller";
 import { keyToTuiAction } from "./input";
@@ -17,7 +17,7 @@ import {
 } from "./state";
 import type { TuiCommand, TuiData, TuiForm, TuiState } from "./types";
 
-export async function runTui(app: AgentSwitchApp): Promise<void> {
+export async function runTui(app: AiAgentSwitchApp): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     const status = await app.status();
     renderStatic(status);
@@ -86,9 +86,9 @@ export async function runTui(app: AgentSwitchApp): Promise<void> {
           } else if (action.type === "add") {
             ({ state, data } = handleAdd(state, data));
           } else if (action.type === "toggle") {
-            state = reduceTuiState(state, { type: "message", message: { tone: "info", text: "Space 只在表单选项中使用" } }, data);
+            state = reduceTuiState(state, { type: "message", message: { tone: "info", text: "Space is only used in form options" } }, data);
           } else if (action.type === "apply-all") {
-            state = reduceTuiState(state, { type: "message", message: { tone: "info", text: "Clients 中逐个进入配置；批量切换请用 CLI use-all" } }, data);
+            state = reduceTuiState(state, { type: "message", message: { tone: "info", text: "Configure clients one by one; use CLI use-all for batch switching" } }, data);
           } else if (action.type === "remove") {
             ({ state, data } = handleRemove(state, data));
           } else if (action.type === "edit") {
@@ -123,21 +123,21 @@ function cleanup(onData: (key: string) => void): void {
 }
 
 function renderStatic(status: AppStatus): void {
-  console.log("agent-switch TUI 需要交互式终端，当前以只读状态输出。");
-  console.log(`配置：${status.configPath}`);
+  console.log("ai-agent-switch TUI requires an interactive terminal; printing read-only status.");
+  console.log(`config: ${status.configPath}`);
   const route = status.routes.default?.candidates ?? [];
   if (route.length > 0) {
-    console.log(`默认路由：${route.map((item) => `${item.providerId}/${item.modelId}`).join(" -> ")}`);
+    console.log(`default route: ${route.map((item) => `${item.providerId}/${item.modelId}`).join(" -> ")}`);
   }
   if (status.state.lastSwitch) {
-    console.log(`最近切换：${status.state.lastSwitch.clientId} ${status.state.lastSwitch.providerId}/${status.state.lastSwitch.modelId}`);
+    console.log(`last switch: ${status.state.lastSwitch.clientId} ${status.state.lastSwitch.providerId}/${status.state.lastSwitch.modelId}`);
   }
   for (const client of status.clients) {
     console.log(`${client.clientId}: ${client.providerId ?? "-"} / ${client.modelId ?? "-"}`);
   }
 }
 
-export async function handleEnter(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
+export async function handleEnter(app: AiAgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
   if (state.view === "menu") {
     return { state: reduceTuiState(state, { type: "open-view", view: viewForMainMenuItem(selectedMainMenuItem(state)) }, data), data };
   }
@@ -149,15 +149,15 @@ export async function handleEnter(app: AgentSwitchApp, state: TuiState, data: Tu
     if (isProviderCustomRowSelected(state)) {
       return { state: openCustomProviderForm(state), data };
     }
-    return { state: reduceTuiState(state, { type: "message", message: { tone: "info", text: "Provider 操作：a 添加 preset，Esc 返回" } }, data), data };
+    return { state: reduceTuiState(state, { type: "message", message: { tone: "info", text: "Provider actions: a adds preset, Esc goes back" } }, data), data };
   }
 
   if (state.view === "presets") {
     const presetId = selectedPresetId(state, data);
-    if (!presetId) return withMessage(state, data, "warning", "没有可添加的 preset");
+    if (!presetId) return withMessage(state, data, "warning", "No preset to add");
     const result = await executeTuiCommand(app, { type: "add-provider-preset", presetId });
     const target = result.data.models.find((model) => model.providerId === presetId && model.isProviderDefault);
-    if (!target) throw new Error(`新增 preset 后未找到默认模型: ${presetId}`);
+    if (!target) throw new Error(`Default model not found after adding preset: ${presetId}`);
     return {
       state: focusModelTarget({ ...state, view: "models", message: result.message }, result.data, target.ref),
       data: result.data,
@@ -170,7 +170,7 @@ export async function handleEnter(app: AgentSwitchApp, state: TuiState, data: Tu
 
   if (state.view === "clients") {
     const clientId = selectedClientId(state, data);
-    if (!clientId) return withMessage(state, data, "warning", "没有可配置的 client");
+    if (!clientId) return withMessage(state, data, "warning", "No configurable client");
     const nextData = await loadTuiData(app, { clientId });
     return {
       state: {
@@ -179,7 +179,7 @@ export async function handleEnter(app: AgentSwitchApp, state: TuiState, data: Tu
         previousView: "clients",
         clientDetail: { clientId },
         selections: { ...state.selections, clientDetail: 0 },
-        message: { tone: "info", text: "选择要应用的模型或 agent-switch proxy" },
+        message: { tone: "info", text: "Choose a model or ai-agent-switch proxy to apply" },
       },
       data: nextData,
     };
@@ -201,72 +201,72 @@ function handleAdd(state: TuiState, data: TuiData): { state: TuiState; data: Tui
     const providerId = selected?.providerId ?? data.status.providers[0]?.id ?? "";
     return { state: openAddModelForm(state, providerId), data };
   }
-  return withMessage(state, data, "info", "a 可在 Providers 添加 preset，或在 Models 添加模型");
+  return withMessage(state, data, "info", "Use a in Providers to add a preset, or in Models to add a model");
 }
 
 function handleRemove(state: TuiState, data: TuiData): { state: TuiState; data: TuiData } {
   if (state.view === "providers") {
     const providerId = selectedProviderId(state, data);
-    if (!providerId) return withMessage(state, data, "warning", "请选择要删除的 provider");
+    if (!providerId) return withMessage(state, data, "warning", "Select a provider to remove");
     return {
-      state: openConfirm(state, `删除 provider ${providerId}？`, { type: "remove-provider", providerId }),
+      state: openConfirm(state, `Remove provider ${providerId}?`, { type: "remove-provider", providerId }),
       data,
     };
   }
   if (state.view === "models") {
     const target = selectedModelTarget(state, data);
-    if (!target) return withMessage(state, data, "warning", "请选择要删除的模型");
+    if (!target) return withMessage(state, data, "warning", "Select a model to remove");
     return {
-      state: openConfirm(state, `删除模型 ${target.ref}？`, { type: "remove-model", providerId: target.providerId, modelId: target.modelId }),
+      state: openConfirm(state, `Remove model ${target.ref}?`, { type: "remove-model", providerId: target.providerId, modelId: target.modelId }),
       data,
     };
   }
-  return withMessage(state, data, "info", "x 可在 Providers 删除 provider，或在 Models 删除模型");
+  return withMessage(state, data, "info", "Use x in Providers to remove a provider, or in Models to remove a model");
 }
 
-async function handleEdit(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
-  if (state.view !== "providers") return withMessage(state, data, "info", "e 只在 Providers 中编辑 provider");
+async function handleEdit(app: AiAgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
+  if (state.view !== "providers") return withMessage(state, data, "info", "Use e in Providers to edit a provider");
   const providerId = selectedProviderId(state, data);
-  if (!providerId) return withMessage(state, data, "warning", "请选择要编辑的 provider");
+  if (!providerId) return withMessage(state, data, "warning", "Select a provider to edit");
   const config = await app.loadConfig();
   const provider = config.providers[providerId];
-  if (!provider) return withMessage(state, data, "warning", "请选择要编辑的 provider");
+  if (!provider) return withMessage(state, data, "warning", "Select a provider to edit");
   return { state: openCustomProviderForm(state, provider), data };
 }
 
-async function handleProviderTest(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
-  if (state.view !== "providers") return withMessage(state, data, "info", "t 只在 Providers 中测试 provider");
+async function handleProviderTest(app: AiAgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
+  if (state.view !== "providers") return withMessage(state, data, "info", "Use t in Providers to test a provider");
   const providerId = selectedProviderId(state, data);
-  if (!providerId) return withMessage(state, data, "warning", "请选择要测试的 provider");
+  if (!providerId) return withMessage(state, data, "warning", "Select a provider to test");
   const result = await executeTuiCommand(app, { type: "test-provider", providerId });
   return { state: { ...state, message: result.message }, data: result.data };
 }
 
-async function handleClientDetect(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
-  if (state.view !== "clients") return withMessage(state, data, "info", "d 只在 Clients 中检测 client");
+async function handleClientDetect(app: AiAgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
+  if (state.view !== "clients") return withMessage(state, data, "info", "Use d in Clients to detect a client");
   const result = await executeTuiCommand(app, { type: "detect-clients" });
   return { state: { ...state, message: result.message }, data: result.data };
 }
 
-async function handleClientShow(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
-  if (state.view !== "clients") return withMessage(state, data, "info", "v 只在 Clients 中查看 client");
+async function handleClientShow(app: AiAgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
+  if (state.view !== "clients") return withMessage(state, data, "info", "Use v in Clients to view a client");
   const clientId = selectedClientId(state, data);
-  if (!clientId) return withMessage(state, data, "warning", "没有可查看的 client");
+  if (!clientId) return withMessage(state, data, "warning", "No client to view");
   const result = await executeTuiCommand(app, { type: "show-client", clientId });
   return { state: { ...state, message: result.message }, data: result.data };
 }
 
-export async function handleClientDetailEnter(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
+export async function handleClientDetailEnter(app: AiAgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
   const clientId = state.clientDetail?.clientId;
-  if (!clientId) return withMessage(state, data, "warning", "没有选中的 client");
+  if (!clientId) return withMessage(state, data, "warning", "No client selected");
   const actionIndex = state.selections.clientDetail;
   if (actionIndex === 0) {
-    if (!state.activeTargetRef) return withMessage(state, data, "warning", "请先在 Models 中选择模型");
+    if (!state.activeTargetRef) return withMessage(state, data, "warning", "Select a model in Models first");
     const result = await executeTuiCommand(app, { type: "apply-client", clientId, target: state.activeTargetRef });
     return { state: { ...state, message: result.message }, data: result.data };
   }
   if (actionIndex === 1) {
-    const result = await executeTuiCommand(app, { type: "use-agent-switch-proxy", clientId });
+    const result = await executeTuiCommand(app, { type: "use-ai-agent-switch-proxy", clientId });
     return { state: { ...state, message: result.message }, data: result.data };
   }
   if (actionIndex === 2) {
@@ -277,31 +277,31 @@ export async function handleClientDetailEnter(app: AgentSwitchApp, state: TuiSta
   return { state: { ...state, message: result.message }, data: result.data };
 }
 
-async function handleDefaultModel(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
-  if (state.view !== "models") return withMessage(state, data, "info", "* 只在 Models 中设置默认模型");
+async function handleDefaultModel(app: AiAgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
+  if (state.view !== "models") return withMessage(state, data, "info", "Use * in Models to set the default model");
   const target = selectedModelTarget(state, data);
-  if (!target) return withMessage(state, data, "warning", "请选择模型");
+  if (!target) return withMessage(state, data, "warning", "Select a model");
   const result = await executeTuiCommand(app, { type: "set-provider-default-model", providerId: target.providerId, modelId: target.modelId });
   return { state: focusModelTarget({ ...state, message: result.message }, result.data, target.ref), data: result.data };
 }
 
-async function handleRoutePrimary(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
-  if (state.view !== "models") return withMessage(state, data, "info", "r 只在 Models 中设置 route primary");
+async function handleRoutePrimary(app: AiAgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
+  if (state.view !== "models") return withMessage(state, data, "info", "Use r in Models to set route primary");
   const target = selectedModelTarget(state, data);
-  if (!target) return withMessage(state, data, "warning", "没有可设置 route 的模型");
+  if (!target) return withMessage(state, data, "warning", "No model available for route");
   const result = await executeTuiCommand(app, { type: "set-route-primary", target: target.ref });
   return { state: focusModelTarget({ ...state, message: result.message }, result.data, target.ref), data: result.data };
 }
 
-async function handleRouteFallback(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
-  if (state.view !== "models") return withMessage(state, data, "info", "f 只在 Models 中添加 fallback");
+async function handleRouteFallback(app: AiAgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
+  if (state.view !== "models") return withMessage(state, data, "info", "Use f in Models to add fallback");
   const target = selectedModelTarget(state, data);
-  if (!target) return withMessage(state, data, "warning", "没有可添加 fallback 的模型");
+  if (!target) return withMessage(state, data, "warning", "No model available for fallback");
   const result = await executeTuiCommand(app, { type: "add-route-fallback", target: target.ref });
   return { state: focusModelTarget({ ...state, message: result.message }, result.data, target.ref), data: result.data };
 }
 
-export async function handleFormKey(app: AgentSwitchApp, state: TuiState, data: TuiData, key: string): Promise<{ state: TuiState; data: TuiData }> {
+export async function handleFormKey(app: AiAgentSwitchApp, state: TuiState, data: TuiData, key: string): Promise<{ state: TuiState; data: TuiData }> {
   if (!state.form) return { state, data };
   const field = currentField(state);
   if (key === "\u001b") return { state: reduceTuiState(state, { type: "back" }, data), data };
@@ -318,7 +318,7 @@ export async function handleFormKey(app: AgentSwitchApp, state: TuiState, data: 
   return { state, data };
 }
 
-async function handleConfirmKey(app: AgentSwitchApp, state: TuiState, data: TuiData, key: string): Promise<{ state: TuiState; data: TuiData }> {
+async function handleConfirmKey(app: AiAgentSwitchApp, state: TuiState, data: TuiData, key: string): Promise<{ state: TuiState; data: TuiData }> {
   if (!state.confirm) return { state, data };
   if (key === "\u001b") return { state: reduceTuiState(state, { type: "back" }, data), data };
   if (key !== "\r") return { state, data };
@@ -339,7 +339,7 @@ function openCustomProviderForm(state: TuiState, provider?: ProviderProfile): Tu
     ...state,
     view: "custom-provider",
     previousView: state.view,
-    message: { tone: "info", text: "type 字段可用 ←/→ 或 Space 切换 provider 类型" },
+    message: { tone: "info", text: "Use ←/→ or Space in the type field to change provider type" },
     form: {
       kind: "custom-provider",
       activeField: 0,
@@ -368,7 +368,7 @@ function openAddModelForm(state: TuiState, providerId: string): TuiState {
     ...state,
     view: "add-model",
     previousView: state.view,
-    message: { tone: "info", text: "填写 provider 和 model，Enter 保存，Esc 取消" },
+    message: { tone: "info", text: "Fill provider and model, Enter saves, Esc cancels" },
     form: {
       kind: "add-model",
       activeField: providerId ? 1 : 0,
@@ -417,10 +417,10 @@ function wrapIndex(value: number, length: number): number {
   return ((value % length) + length) % length;
 }
 
-async function submitForm(app: AgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
+async function submitForm(app: AiAgentSwitchApp, state: TuiState, data: TuiData): Promise<{ state: TuiState; data: TuiData }> {
   if (!state.form) return { state, data };
   const missing = state.form.fields.find((field) => field.required && !field.value.trim());
-  if (missing) return withMessage(state, data, "warning", `请填写 ${missing.label}`);
+  if (missing) return withMessage(state, data, "warning", `Fill ${missing.label}`);
 
   if (state.form.kind === "custom-provider") {
     const provider = buildCustomProviderFromForm(state.form);
@@ -454,11 +454,11 @@ function formValues(form: TuiForm): Record<string, string | undefined> {
 export function buildCustomProviderFromForm(form: TuiForm): ProviderProfile {
   const values = formValues(form);
   const models = values.models!.split(",").map((item) => item.trim()).filter(Boolean);
-  if (models.length === 0) throw new Error("请填写 models");
+  if (models.length === 0) throw new Error("Fill models");
   const defaultModel = form.existingProvider?.defaultModel && models.includes(form.existingProvider.defaultModel)
     ? form.existingProvider.defaultModel
     : models[0];
-  if (!defaultModel) throw new Error("请填写 models");
+  if (!defaultModel) throw new Error("Fill models");
 
   return {
     id: form.existingProvider?.id ?? values.id!,

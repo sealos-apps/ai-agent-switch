@@ -36,7 +36,7 @@ export class GeminiAdapter extends BaseClientAdapter {
     const file = before === undefined
       ? { path: this.configPath, after: stringifyJson(config) }
       : { path: this.configPath, before, after: stringifyJson(config) };
-    return { clientId: this.id, summary: `将 Gemini CLI 切换到 ${input.provider.id}/${input.modelId}`, files: [file] };
+    return { clientId: this.id, summary: `Switch Gemini CLI to ${input.provider.id}/${input.modelId}`, files: [file] };
   }
 
   async getCurrent(): Promise<ClientCurrentState> {

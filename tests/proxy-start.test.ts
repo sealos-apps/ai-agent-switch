@@ -2,14 +2,14 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { AgentSwitchApp } from "../src/core/app";
+import { AiAgentSwitchApp } from "../src/core/app";
 import { assertProxyStartAllowed, startProxyDaemon } from "../src/proxy/server";
 
 describe("proxy start checks", () => {
   test("refuses to start when proxy is disabled", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-proxy-start-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-proxy-start-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       await app.addProvider({
         id: "local",
         name: "Local",
@@ -30,9 +30,9 @@ describe("proxy start checks", () => {
     let unrefCalled = false;
     let detached: boolean | undefined;
     try {
-      process.argv = ["bun", "/tmp/agent-switch.js"];
+      process.argv = ["bun", "/tmp/ai-agent-switch.js"];
       const pid = startProxyDaemon((argv, options) => {
-        expect(argv).toEqual([process.execPath, "/tmp/agent-switch.js", "proxy", "start", "--foreground"]);
+        expect(argv).toEqual([process.execPath, "/tmp/ai-agent-switch.js", "proxy", "start", "--foreground"]);
         detached = options.detached;
         return {
           pid: 12345,

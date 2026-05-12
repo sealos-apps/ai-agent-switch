@@ -7,7 +7,7 @@ const cliPath = join(import.meta.dir, "..", "src", "cli", "main.ts");
 
 describe("CLI model list", () => {
   test("model list --json returns flat provider/model refs with route metadata", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-model-list-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-model-list-"));
     try {
       await run(
         home,
@@ -64,7 +64,7 @@ describe("CLI model list", () => {
   });
 
   test("model list prints refs for humans", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-model-list-human-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-model-list-human-"));
     try {
       await run(home, "provider", "preset-add", "openrouter", "--api-key-env", "OPENROUTER_API_KEY");
 
@@ -80,7 +80,7 @@ describe("CLI model list", () => {
 
 async function run(home: string, ...args: string[]): Promise<string> {
   const proc = Bun.spawn(["bun", cliPath, ...args], {
-    env: { ...process.env, HOME: home, AGENT_SWITCH_HOME: join(home, ".agent-switch") },
+    env: { ...process.env, HOME: home, AI_AGENT_SWITCH_HOME: join(home, ".ai-agent-switch") },
     stdout: "pipe",
     stderr: "pipe",
   });

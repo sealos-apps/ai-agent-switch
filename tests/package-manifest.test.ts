@@ -8,10 +8,10 @@ describe("root package manifest", () => {
     };
 
     expect(packageJson.optionalDependencies).toEqual({
-      "@agent-switch/linux-x64": packageJson.version,
-      "@agent-switch/darwin-arm64": packageJson.version,
-      "@agent-switch/darwin-x64": packageJson.version,
-      "@agent-switch/windows-x64": packageJson.version,
+      "@ai-agent-switch/linux-x64": packageJson.version,
+      "@ai-agent-switch/darwin-arm64": packageJson.version,
+      "@ai-agent-switch/darwin-x64": packageJson.version,
+      "@ai-agent-switch/windows-x64": packageJson.version,
     });
   });
 });

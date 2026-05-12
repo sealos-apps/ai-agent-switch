@@ -1,29 +1,30 @@
 {
-  "name": "agent-switch",
+  "name": "ai-agent-switch",
   "version": "0.1.0",
-  "description": "CLI/TUI control plane for switching AI coding agent providers and models.",
+  "description": "AI Agent Switch CLI/TUI control plane for switching AI coding agent providers and models.",
   "type": "module",
   "bin": {
-    "agent-switch": "./bin/agent-switch.js",
+    "ai-agent-switch": "./bin/ai-agent-switch.js",
     "as": "./bin/as.js"
   },
   "scripts": {
     "dev": "bun run src/cli/main.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun build ./src/cli/main.ts --target=bun --outfile=dist/agent-switch.js && cp dist/agent-switch.js dist/as.js",
+    "build": "bun build ./src/cli/main.ts --target=bun --outfile=dist/ai-agent-switch.js && cp dist/ai-agent-switch.js dist/as.js",
     "npm:build-package": "bun run scripts/build-npm-package.ts",
     "clean": "rm -rf dist",
     "check": "bun test && bun run typecheck && bun run build"
   },
   "files": [
-    "bin"
+    "bin",
+    "README_CN.md"
   ],
   "optionalDependencies": {
-    "@agent-switch/linux-x64": "0.1.0",
-    "@agent-switch/darwin-arm64": "0.1.0",
-    "@agent-switch/darwin-x64": "0.1.0",
-    "@agent-switch/windows-x64": "0.1.0"
+    "@ai-agent-switch/linux-x64": "0.1.0",
+    "@ai-agent-switch/darwin-arm64": "0.1.0",
+    "@ai-agent-switch/darwin-x64": "0.1.0",
+    "@ai-agent-switch/windows-x64": "0.1.0"
   },
   "dependencies": {
     "cac": "^6.7.14",

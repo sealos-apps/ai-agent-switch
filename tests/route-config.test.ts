@@ -2,13 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { AgentSwitchApp } from "../src/core/app";
+import { AiAgentSwitchApp } from "../src/core/app";
 
 describe("route config", () => {
   test("sets default route and manages fallback candidates", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-routes-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-routes-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       await app.addProvider({
         id: "openrouter",
         name: "OpenRouter",
@@ -43,9 +43,9 @@ describe("route config", () => {
   });
 
   test("rejects route refs that do not exist in provider registry", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-routes-invalid-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-routes-invalid-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       expect(app.setDefaultRoute("missing/model")).rejects.toThrow("Provider not found");
     } finally {
       await rm(home, { recursive: true, force: true });

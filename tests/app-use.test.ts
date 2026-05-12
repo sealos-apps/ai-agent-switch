@@ -2,13 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { AgentSwitchApp } from "../src/core/app";
+import { AiAgentSwitchApp } from "../src/core/app";
 
-describe("AgentSwitchApp.useClient", () => {
+describe("AiAgentSwitchApp.useClient", () => {
   test("-y applies a validated provider/model switch", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-use-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-use-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       await app.addProvider({
         id: "openrouter",
         name: "OpenRouter",
@@ -34,9 +34,9 @@ describe("AgentSwitchApp.useClient", () => {
   });
 
   test("without -y returns a patch plan and does not write client config", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-use-dry-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-use-dry-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       await app.addProvider({
         id: "openrouter",
         name: "OpenRouter",
@@ -59,10 +59,10 @@ describe("AgentSwitchApp.useClient", () => {
     }
   });
 
-  test("can connect a client to the local agent-switch proxy without selecting an upstream provider", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-use-proxy-"));
+  test("can connect a client to the local ai-agent-switch proxy without selecting an upstream provider", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-use-proxy-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
 
       const result = await app.useClientProxy({
         clientId: "qwen",
@@ -72,14 +72,14 @@ describe("AgentSwitchApp.useClient", () => {
       expect(result.applied).toBe(true);
       expect(result.requiresConfirmation).toBe(false);
       const settings = JSON.parse(await readFile(join(home, ".qwen/settings.json"), "utf8"));
-      expect(settings.security.auth.selectedType).toBe("agent-switch-proxy");
-      expect(settings.model.name).toBe("agent-switch/default");
-      expect(settings.modelProviders["agent-switch-proxy"].baseUrl).toBe("http://127.0.0.1:17890/v1");
-      expect(settings.modelProviders["agent-switch-proxy"].description).toContain("openai-chat-compatible");
+      expect(settings.security.auth.selectedType).toBe("ai-agent-switch-proxy");
+      expect(settings.model.name).toBe("ai-agent-switch/default");
+      expect(settings.modelProviders["ai-agent-switch-proxy"].baseUrl).toBe("http://127.0.0.1:17890/v1");
+      expect(settings.modelProviders["ai-agent-switch-proxy"].description).toContain("openai-chat-compatible");
       expect((await app.status()).state.lastSwitch).toMatchObject({
         clientId: "qwen",
-        providerId: "agent-switch-proxy",
-        modelId: "agent-switch/default",
+        providerId: "ai-agent-switch-proxy",
+        modelId: "ai-agent-switch/default",
       });
     } finally {
       await rm(home, { recursive: true, force: true });
@@ -87,9 +87,9 @@ describe("AgentSwitchApp.useClient", () => {
   });
 
   test("maps 0.0.0.0 proxy host to localhost in generated client config", async () => {
-    const home = await mkdtemp(join(tmpdir(), "agent-switch-use-proxy-host-"));
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-use-proxy-host-"));
     try {
-      const app = new AgentSwitchApp({ homeDir: home, cwd: home });
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
       await app.updateProxyConfig({ host: "0.0.0.0" });
 
       await app.useClientProxy({
@@ -98,7 +98,7 @@ describe("AgentSwitchApp.useClient", () => {
       });
 
       const settings = JSON.parse(await readFile(join(home, ".qwen/settings.json"), "utf8"));
-      expect(settings.modelProviders["agent-switch-proxy"].baseUrl).toBe("http://127.0.0.1:17890/v1");
+      expect(settings.modelProviders["ai-agent-switch-proxy"].baseUrl).toBe("http://127.0.0.1:17890/v1");
     } finally {
       await rm(home, { recursive: true, force: true });
     }

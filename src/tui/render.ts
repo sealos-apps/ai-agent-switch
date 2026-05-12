@@ -7,14 +7,14 @@ type RenderSnapshot = {
 };
 
 const menuLabels: Record<MainMenuItem, string> = {
-  clients: "Clients      管理 Codex / Gemini / Qwen / OpenClaw 等客户端",
-  providers: "Providers    管理 OpenRouter / DeepSeek / Ollama / 自定义 endpoint",
-  models: "Models       管理 provider 下的模型，并选择当前 target",
+  clients: "Clients      Manage Codex / Gemini / Qwen / OpenClaw and other clients",
+  providers: "Providers    Manage OpenRouter / DeepSeek / Ollama / custom endpoints",
+  models: "Models       Manage provider models and select the active target",
 };
 
 export function renderTuiFrame(snapshot: RenderSnapshot, size: { rows: number; cols: number }): string {
   const header = [
-    "agent-switch",
+    "ai-agent-switch",
     `config ${snapshot.data.status.configPath}`,
     "",
   ];
@@ -54,7 +54,7 @@ function renderMenu(snapshot: RenderSnapshot): string[] {
 
 function renderClients(snapshot: RenderSnapshot, maxRows: number): string[] {
   const header = ["Clients", ""];
-  if (snapshot.data.clients.length === 0) return limitLines([...header, "没有可管理的 client"], maxRows);
+  if (snapshot.data.clients.length === 0) return limitLines([...header, "No manageable clients"], maxRows);
   const selectedIndex = snapshot.state.selections.clients;
   const rows = windowedLines(
     snapshot.data.clients,
@@ -68,11 +68,11 @@ function renderClients(snapshot: RenderSnapshot, maxRows: number): string[] {
 function renderClientDetail(snapshot: RenderSnapshot): string[] {
   const clientId = snapshot.state.clientDetail?.clientId;
   const client = snapshot.data.clients.find((item) => item.id === clientId);
-  if (!clientId || !client) return ["Client", "", "没有选中的 client"];
+  if (!clientId || !client) return ["Client", "", "No client selected"];
   const current = snapshot.data.clientCurrent;
   const route = snapshot.data.status.routes.default?.candidates ?? [];
-  const mode = current?.providerId === "agent-switch-proxy" || current?.modelId === "agent-switch/default" ? "agent-switch proxy" : "current config";
-  const actions = ["Apply current model", "Use agent-switch proxy", "Show current config", "Detect this client"];
+  const mode = current?.providerId === "ai-agent-switch-proxy" || current?.modelId === "ai-agent-switch/default" ? "ai-agent-switch proxy" : "current config";
+  const actions = ["Apply current model", "Use ai-agent-switch proxy", "Show current config", "Detect this client"];
   return [
     `Client / ${client.displayName}`,
     "",
@@ -83,7 +83,7 @@ function renderClientDetail(snapshot: RenderSnapshot): string[] {
     `  model     ${current?.modelId ?? "-"}`,
     `  file      ${current?.configPath ?? client.configPath}`,
     "",
-    "agent-switch proxy",
+    "ai-agent-switch proxy",
     `  endpoint  http://${snapshot.data.status.proxy.host}:${snapshot.data.status.proxy.port}/v1`,
     `  route     ${route.length > 0 ? route.map((item) => `${item.providerId}/${item.modelId}`).join(" -> ") : "-"}`,
     "",
@@ -99,7 +99,7 @@ function renderProviders(snapshot: RenderSnapshot, maxRows: number): string[] {
     `${pointer(snapshot.state.selections.providers === 1)} Add custom provider`,
   ];
   if (snapshot.data.status.providers.length === 0) {
-    lines.push("", "还没有 provider。先添加 preset，之后才能在 Models 中选择模型。");
+    lines.push("", "No providers yet. Add a preset first, then select a model in Models.");
     return limitLines(lines, maxRows);
   }
   const selectedIndex = Math.max(0, snapshot.state.selections.providers - 2);
@@ -126,7 +126,7 @@ function renderPresets(snapshot: RenderSnapshot, maxRows: number): string[] {
 
 function renderModels(snapshot: RenderSnapshot, maxRows: number): string[] {
   const header = ["Models", ""];
-  if (snapshot.data.models.length === 0) return limitLines([...header, "还没有模型。先到 Providers 添加 provider preset。"], maxRows);
+  if (snapshot.data.models.length === 0) return limitLines([...header, "No models yet. Add a provider preset in Providers first."], maxRows);
   const rows = windowedLines(
     snapshot.data.models,
     snapshot.state.selections.models,
@@ -148,30 +148,30 @@ function renderHelp(view: TuiView): string[] {
   const lines = [
     "Help",
     "",
-    "全局按键",
-    "↑ / ↓   移动选择",
-    "Enter   进入或执行当前项",
-    "Esc     返回上一层 / 关闭帮助",
-    "h       打开帮助",
-    "q       退出",
+    "Global keys",
+    "↑ / ↓   Move selection",
+    "Enter   Open or run the current item",
+    "Esc     Go back / close help",
+    "h       Open help",
+    "q       Quit",
   ];
-  if (view === "clients") lines.push("", "Clients: Enter 进入 client 配置");
-  if (view === "client-detail") lines.push("", "Client: Enter 应用当前模型 / 代理 / 查看 / 探测，Esc 返回 Clients");
-  if (view === "providers") lines.push("", "Providers: Enter 选择，a 添加 preset，e 编辑，x 删除，t 测试");
-  if (view === "models") lines.push("", "Models: Enter 设为当前模型，a 添加模型，x 删除，* 默认，r route，f fallback");
+  if (view === "clients") lines.push("", "Clients: Enter opens client config");
+  if (view === "client-detail") lines.push("", "Client: Enter applies current model / proxy / view / detect, Esc returns to Clients");
+  if (view === "providers") lines.push("", "Providers: Enter selects, a adds preset, e edits, x removes, t tests");
+  if (view === "models") lines.push("", "Models: Enter sets active model, a adds model, x removes, * default, r route, f fallback");
   return lines;
 }
 
 function renderForm(snapshot: RenderSnapshot): string[] {
-  if (!snapshot.state.form) return ["Form", "", "没有可编辑的表单"];
+  if (!snapshot.state.form) return ["Form", "", "No editable form"];
   const activeField = snapshot.state.form.fields[snapshot.state.form.activeField];
   const optionHint = activeField?.options?.length
     ? [
         "",
         ...renderOptionLines(activeField.options, activeField.optionLabels),
-        "←/→ 或 Space 切换选项，↑/↓ 切换字段，Enter 保存，Esc 取消",
+        "←/→ or Space changes options, ↑/↓ changes fields, Enter saves, Esc cancels",
       ]
-    : ["", "输入文字编辑当前字段，↑/↓ 切换字段，Enter 保存，Esc 取消"];
+    : ["", "Type to edit the current field, ↑/↓ changes fields, Enter saves, Esc cancels"];
   return [
     snapshot.state.form.kind === "custom-provider" ? "Add custom provider" : "Add model",
     "",
@@ -187,13 +187,13 @@ function renderForm(snapshot: RenderSnapshot): string[] {
 }
 
 function renderOptionLines(options: readonly string[], labels?: Record<string, string>): string[] {
-  const lines = ["可选类型:"];
+  const lines = ["Available types:"];
   const explainedOptions = options.filter((option) => option.startsWith("openai-"));
   const compactOptions = options.filter((option) => !option.startsWith("openai-"));
   for (const option of explainedOptions) {
     lines.push(`  ${option.padEnd(24)} ${labels?.[option] ?? ""}`);
   }
-  lines.push(...wrapOptionList("  其他: ", compactOptions));
+  lines.push(...wrapOptionList("  Other: ", compactOptions));
   return lines;
 }
 
@@ -217,23 +217,23 @@ function renderConfirm(snapshot: RenderSnapshot): string[] {
   return [
     "Confirm",
     "",
-    snapshot.state.confirm?.message ?? "确认执行？",
+    snapshot.state.confirm?.message ?? "Confirm this action?",
     "",
-    "Enter 确认 · Esc 取消",
+    "Enter confirm · Esc cancel",
   ];
 }
 
 function renderFooter(snapshot: RenderSnapshot): string {
-  if (snapshot.state.view === "help") return "Esc 返回";
-  if (snapshot.state.view === "menu") return "↑/↓ 移动 · Enter 进入 · h 帮助 · q 退出";
-  if (snapshot.state.view === "clients") return "↑/↓ 移动 · Enter 进入 · Esc 返回 · h 帮助";
-  if (snapshot.state.view === "client-detail") return "↑/↓ 移动 · Enter 选择 · Esc 返回 · h 帮助";
-  if (snapshot.state.view === "providers") return "↑/↓ 移动 · Enter 选择 · a 添加 · e 编辑 · x 删除 · t 测试 · Esc 返回 · h 帮助";
-  if (snapshot.state.view === "presets") return "↑/↓ 移动 · Enter 添加 preset · Esc 返回 · h 帮助";
-  if (snapshot.state.view === "models") return "↑/↓ 移动 · Enter 当前 · a 添加模型 · x 删除 · * 默认 · r route · f fallback · Esc 返回 · h 帮助";
-  if (snapshot.state.view === "custom-provider" || snapshot.state.view === "add-model") return "↑/↓ 字段 · ←/→/Space 切换选项 · Enter 保存 · Esc 返回 · Ctrl-C 退出";
-  if (snapshot.state.view === "confirm") return "Enter 确认 · Esc 取消 · q/Ctrl-C 退出";
-  return "↑/↓ 移动 · Enter 保存/确认 · Esc 返回";
+  if (snapshot.state.view === "help") return "Esc back";
+  if (snapshot.state.view === "menu") return "↑/↓ move · Enter open · h help · q quit";
+  if (snapshot.state.view === "clients") return "↑/↓ move · Enter open · Esc back · h help";
+  if (snapshot.state.view === "client-detail") return "↑/↓ move · Enter select · Esc back · h help";
+  if (snapshot.state.view === "providers") return "↑/↓ move · Enter select · a add · e edit · x remove · t test · Esc back · h help";
+  if (snapshot.state.view === "presets") return "↑/↓ move · Enter add preset · Esc back · h help";
+  if (snapshot.state.view === "models") return "↑/↓ move · Enter active · a add model · x remove · * default · r route · f fallback · Esc back · h help";
+  if (snapshot.state.view === "custom-provider" || snapshot.state.view === "add-model") return "↑/↓ field · ←/→/Space option · Enter save · Esc back · Ctrl-C quit";
+  if (snapshot.state.view === "confirm") return "Enter confirm · Esc cancel · q/Ctrl-C quit";
+  return "↑/↓ move · Enter save/confirm · Esc back";
 }
 
 function renderStatus(snapshot: RenderSnapshot): string {

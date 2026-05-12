@@ -4,7 +4,7 @@ import { parse } from "jsonc-parser";
 import type { ClientId } from "../clients";
 import { writeAtomic } from "../fs/atomic";
 
-export type AgentSwitchState = {
+export type AiAgentSwitchState = {
   version: 1;
   lastSwitch?: {
     clientId: ClientId | "all";
@@ -22,15 +22,15 @@ export type AgentSwitchState = {
 export class StateStore {
   constructor(readonly statePath: string) {}
 
-  async load(): Promise<AgentSwitchState> {
+  async load(): Promise<AiAgentSwitchState> {
     if (!existsSync(this.statePath)) return createDefaultState();
     const text = await readFile(this.statePath, "utf8");
     const parsed = parse(text) as unknown;
     if (!parsed || typeof parsed !== "object") return createDefaultState();
-    return { ...createDefaultState(), ...(parsed as Partial<AgentSwitchState>) };
+    return { ...createDefaultState(), ...(parsed as Partial<AiAgentSwitchState>) };
   }
 
-  async update(mutator: (state: AgentSwitchState) => AgentSwitchState | void): Promise<AgentSwitchState> {
+  async update(mutator: (state: AiAgentSwitchState) => AiAgentSwitchState | void): Promise<AiAgentSwitchState> {
     const draft = await this.load();
     const next = mutator(draft) ?? draft;
     await writeAtomic(this.statePath, `${JSON.stringify(next, null, 2)}\n`);
@@ -38,6 +38,6 @@ export class StateStore {
   }
 }
 
-export function createDefaultState(): AgentSwitchState {
+export function createDefaultState(): AiAgentSwitchState {
   return { version: 1 };
 }
