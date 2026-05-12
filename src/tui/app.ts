@@ -149,7 +149,7 @@ export async function handleEnter(app: AiAgentSwitchApp, state: TuiState, data: 
     if (isProviderCustomRowSelected(state)) {
       return { state: openCustomProviderForm(state), data };
     }
-    return { state: reduceTuiState(state, { type: "message", message: { tone: "info", text: "Provider actions: a adds preset, Esc goes back" } }, data), data };
+    return { state: reduceTuiState(state, { type: "message", message: { tone: "info", text: "Provider actions: a add preset, Esc back" } }, data), data };
   }
 
   if (state.view === "presets") {
@@ -458,7 +458,6 @@ export function buildCustomProviderFromForm(form: TuiForm): ProviderProfile {
   const defaultModel = form.existingProvider?.defaultModel && models.includes(form.existingProvider.defaultModel)
     ? form.existingProvider.defaultModel
     : models[0];
-  if (!defaultModel) throw new Error("Fill models");
 
   return {
     id: form.existingProvider?.id ?? values.id!,

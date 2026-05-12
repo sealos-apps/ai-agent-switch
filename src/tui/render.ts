@@ -155,10 +155,10 @@ function renderHelp(view: TuiView): string[] {
     "h       Open help",
     "q       Quit",
   ];
-  if (view === "clients") lines.push("", "Clients: Enter opens client config");
-  if (view === "client-detail") lines.push("", "Client: Enter applies current model / proxy / view / detect, Esc returns to Clients");
-  if (view === "providers") lines.push("", "Providers: Enter selects, a adds preset, e edits, x removes, t tests");
-  if (view === "models") lines.push("", "Models: Enter sets active model, a adds model, x removes, * default, r route, f fallback");
+  if (view === "clients") lines.push("", "Clients: Enter open client config");
+  if (view === "client-detail") lines.push("", "Client: Enter apply current model / proxy / view / detect, Esc return to Clients");
+  if (view === "providers") lines.push("", "Providers: Enter select, a add preset, e edit, x remove, t test");
+  if (view === "models") lines.push("", "Models: Enter set active model, a add model, x remove, * default, r route, f fallback");
   return lines;
 }
 
