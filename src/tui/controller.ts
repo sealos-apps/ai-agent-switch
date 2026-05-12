@@ -111,7 +111,7 @@ export async function executeTuiCommand(app: TuiApp, command: TuiCommand): Promi
   if (command.type === "show-client") {
     const data = await loadTuiData(app, { clientId: command.clientId });
     const current = data.clientCurrent;
-    if (!current) return { data, message: { tone: "warning", text: `Client not found ${command.clientId}` } };
+    if (!current) return { data, message: { tone: "warning", text: `Client not found: ${command.clientId}` } };
     return {
       data,
       message: {
