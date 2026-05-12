@@ -335,7 +335,7 @@ ai-agent-switch proxy status --json
 ai-agent-switch proxy stop
 ```
 
-`proxy start` 会尊重 `proxy.enabled`。如果还没有启用代理，会提示先执行 `ai-agent-switch proxy enable`。调试时也可以使用：
+`proxy start` 会尊重 `proxy.enabled`。如果还没有启用代理，会提示先执行 `ai-agent-switch proxy enable`。也可以用一条命令启用并启动：
 
 ```bash
 ai-agent-switch proxy start --force

@@ -341,7 +341,7 @@ ai-agent-switch proxy stop
 ai-agent-switch proxy enable
 ```
 
-For debugging, you can also run:
+To enable the proxy and start it in one command:
 
 ```bash
 ai-agent-switch proxy start --force

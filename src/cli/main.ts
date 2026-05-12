@@ -395,7 +395,7 @@ cli.command("completion <shell>", "Output shell completion: zsh / bash").action(
 cli.command("proxy <action>", "Proxy commands: start / stop / status / enable / disable / set")
   .option("--daemon", "Start proxy in the background")
   .option("--foreground", "Start proxy in the foreground")
-  .option("--force", "Ignore proxy.enabled and start in the foreground")
+  .option("--force", "Enable proxy config before starting")
   .option("--host <host>", "Proxy listen host")
   .option("--port <port>", "Proxy listen port")
   .option("--upstream-proxy <url>", "Upstream network proxy, for example http://127.0.0.1:7890")

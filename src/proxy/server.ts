@@ -89,7 +89,10 @@ export function assertProxyStartAllowed(config: AiAgentSwitchConfig): void {
 export function startProxyDaemon(spawn: ProxyDaemonSpawn = Bun.spawn as ProxyDaemonSpawn): number {
   const script = process.argv[1];
   if (!script) throw new Error("Cannot determine current CLI path");
-  const proc = spawn([process.execPath, script, "proxy", "start", "--foreground"], {
+  const command = isBunEmbeddedEntrypoint(script)
+    ? [process.execPath, "proxy", "start", "--foreground"]
+    : [process.execPath, script, "proxy", "start", "--foreground"];
+  const proc = spawn(command, {
     stdout: "ignore",
     stderr: "ignore",
     stdin: "ignore",
@@ -98,6 +101,10 @@ export function startProxyDaemon(spawn: ProxyDaemonSpawn = Bun.spawn as ProxyDae
   });
   proc.unref();
   return proc.pid;
+}
+
+function isBunEmbeddedEntrypoint(script: string): boolean {
+  return script.startsWith("/$bunfs/") || script.includes("\\$bunfs\\");
 }
 
 export async function proxyStatus(options: ProxyStartOptions = {}): Promise<{ running: boolean; pid?: number; pidPath: string }> {
