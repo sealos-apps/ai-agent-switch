@@ -2,12 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { binaryPathForCommand, platformPackageName, runCommand } from "../bin/launcher.js";
 
 describe("npm launcher", () => {
-  test("maps linux x64 to the linux scoped package", () => {
-    expect(platformPackageName({ platform: "linux", arch: "x64" })).toBe("@ai-agent-switch/linux-x64");
+  test("maps linux x64 to the linux platform package", () => {
+    expect(platformPackageName({ platform: "linux", arch: "x64" })).toBe("ai-agent-switch-linux-x64");
   });
 
-  test("maps windows x64 to the windows scoped package", () => {
-    expect(platformPackageName({ platform: "win32", arch: "x64" })).toBe("@ai-agent-switch/windows-x64");
+  test("maps windows x64 to the windows platform package", () => {
+    expect(platformPackageName({ platform: "win32", arch: "x64" })).toBe("ai-agent-switch-windows-x64");
   });
 
   test("builds unix binary paths from the command name", () => {
@@ -27,8 +27,8 @@ describe("npm launcher", () => {
       argv: ["doctor", "--json"],
       requireFn: {
         resolve: (specifier: string) => {
-          expect(specifier).toBe("@ai-agent-switch/windows-x64/package.json");
-          return "/tmp/node_modules/@ai-agent-switch/windows-x64/package.json";
+          expect(specifier).toBe("ai-agent-switch-windows-x64/package.json");
+          return "/tmp/node_modules/ai-agent-switch-windows-x64/package.json";
         },
       },
       spawnFn: (binaryPath: string, argv: string[], options: { stdio: string }) => {
@@ -40,7 +40,7 @@ describe("npm launcher", () => {
     expect(status).toBe(0);
     expect(calls).toEqual([
       {
-        binaryPath: "/tmp/node_modules/@ai-agent-switch/windows-x64/as.exe",
+        binaryPath: "/tmp/node_modules/ai-agent-switch-windows-x64/as.exe",
         argv: ["doctor", "--json"],
         options: { stdio: "inherit" },
       },

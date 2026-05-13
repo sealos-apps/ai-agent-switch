@@ -374,7 +374,7 @@ Run the built artifact directly:
 bun dist/ai-agent-switch.js status
 ```
 
-The npm command wrappers in `bin/` resolve the matching `@ai-agent-switch/<platform>` optional dependency, so local development should run the built artifact directly. Use `npm install -g ai-agent-switch` to test the published global commands.
+The npm command wrappers in `bin/` resolve the matching `ai-agent-switch-<platform>` optional dependency, so local development should run the built artifact directly. Use `npm install -g ai-agent-switch` to test the published global commands.
 
 Package dry-run:
 

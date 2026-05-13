@@ -368,7 +368,7 @@ bun run build
 bun dist/ai-agent-switch.js status
 ```
 
-`bin/` 里的 npm 命令包装器会解析匹配当前平台的 `@ai-agent-switch/<platform>` optional dependency，所以本地开发建议直接运行构建产物。需要测试已发布的全局命令时，请使用 `npm install -g ai-agent-switch`。
+`bin/` 里的 npm 命令包装器会解析匹配当前平台的 `ai-agent-switch-<platform>` optional dependency，所以本地开发建议直接运行构建产物。需要测试已发布的全局命令时，请使用 `npm install -g ai-agent-switch`。
 
 打包检查：
 

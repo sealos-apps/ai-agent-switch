@@ -2,15 +2,15 @@ import { describe, expect, test } from "bun:test";
 import { platformPackageConfig, renderPackageManifest, runtimePackagePlatform } from "../scripts/build-npm-package";
 
 describe("npm package builder", () => {
-  test("windows package uses exe suffix and public scope", () => {
+  test("windows package uses exe suffix and public access", () => {
     const config = platformPackageConfig("windows-x64", "0.1.0");
     const manifest = renderPackageManifest(config);
 
-    expect(config.packageName).toBe("@ai-agent-switch/windows-x64");
+    expect(config.packageName).toBe("ai-agent-switch-windows-x64");
     expect(config.binarySuffix).toBe(".exe");
     expect(config.binaryName("ai-agent-switch")).toBe("ai-agent-switch.exe");
     expect(config.binaryName("as")).toBe("as.exe");
-    expect(manifest.name).toBe("@ai-agent-switch/windows-x64");
+    expect(manifest.name).toBe("ai-agent-switch-windows-x64");
     expect(manifest.os).toEqual(["win32"]);
     expect(manifest.cpu).toEqual(["x64"]);
     expect(manifest.bin["ai-agent-switch"]).toBe("./ai-agent-switch.exe");
