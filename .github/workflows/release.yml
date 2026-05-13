@@ -15,6 +15,10 @@ concurrency:
   group: npm-publish-${{ github.event.inputs.tag_name || github.ref_name }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   verify:
     name: verify
@@ -96,14 +100,15 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
+      - name: Install latest npm
+        run: npm install -g npm@latest
+
       - uses: actions/download-artifact@v4
         with:
           pattern: npm-*
           path: dist/npm-packages
 
       - name: Publish platform packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           npm publish --access public dist/npm-packages/npm-linux-x64
           npm publish --access public dist/npm-packages/npm-darwin-arm64
@@ -127,6 +132,4 @@ jobs:
           NODE
 
       - name: Publish root package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public
