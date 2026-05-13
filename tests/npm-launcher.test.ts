@@ -46,4 +46,40 @@ describe("npm launcher", () => {
       },
     ]);
   });
+
+  test("runCommand handles version without spawning the platform binary", () => {
+    let spawned = false;
+    const logs: string[] = [];
+    const originalLog = console.log;
+    try {
+      console.log = (message?: unknown) => {
+        logs.push(String(message));
+      };
+      const status = runCommand("as", {
+        runtime: { platform: "darwin", arch: "arm64" },
+        argv: ["--version"],
+        requireFn: Object.assign(
+          (specifier: string) => {
+            expect(specifier.endsWith("/package.json")).toBe(true);
+            return { version: "9.8.7" };
+          },
+          {
+            resolve: () => {
+              throw new Error("version should not resolve packages");
+            },
+          },
+        ),
+        spawnFn: () => {
+          spawned = true;
+          return { status: 0 };
+        },
+      });
+
+      expect(status).toBe(0);
+      expect(spawned).toBe(false);
+      expect(logs[0]).toContain("ai-agent-switch/9.8.7 darwin-arm64");
+    } finally {
+      console.log = originalLog;
+    }
+  });
 });

@@ -15,4 +15,5 @@ export interface LauncherOptions {
 export function platformPackageName(runtime?: RuntimePlatform): string;
 export function binaryPathForCommand(packageRoot: string, commandName: string, isWindows?: boolean): string;
 export function resolvePlatformPackageRoot(runtime?: RuntimePlatform, requireFn?: { resolve(specifier: string): string }): string;
+export function rootPackageVersion(requireFn?: { resolve(specifier: string): string; (specifier: string): { version: string } }): string;
 export function runCommand(commandName: string, options?: LauncherOptions): number;
