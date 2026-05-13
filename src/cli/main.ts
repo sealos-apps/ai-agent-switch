@@ -15,7 +15,7 @@ const cli = cac("ai-agent-switch");
 const app = new AiAgentSwitchApp();
 
 cli.help();
-cli.version("0.1.0");
+cli.version("0.1.2");
 
 if (process.argv.slice(2).length === 0) {
   await runTui(app);
