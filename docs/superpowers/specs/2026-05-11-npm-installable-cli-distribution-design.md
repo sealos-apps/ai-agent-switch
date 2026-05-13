@@ -30,10 +30,10 @@ The CLI source depends on the Bun runtime. A plain npm package containing source
 
 - Root package name: `ai-agent-switch`.
 - Platform packages:
-  - `@ai-agent-switch/linux-x64`
-  - `@ai-agent-switch/darwin-arm64`
-  - `@ai-agent-switch/darwin-x64`
-  - `@ai-agent-switch/windows-x64`
+  - `ai-agent-switch-linux-x64`
+  - `ai-agent-switch-darwin-arm64`
+  - `ai-agent-switch-darwin-x64`
+  - `ai-agent-switch-windows-x64`
 - The root package uses `optionalDependencies` for platform packages.
 - Root package `bin` entries point to Node.js wrappers.
 - Platform packages publish standalone executables only.

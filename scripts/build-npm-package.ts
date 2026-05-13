@@ -49,7 +49,7 @@ export function platformPackageConfig(platform: NpmPlatform, version: string): N
   return {
     platform,
     version,
-    packageName: `@ai-agent-switch/${platform}`,
+    packageName: `ai-agent-switch-${platform}`,
     binarySuffix,
     os: os as NpmPlatformConfig["os"],
     cpu,

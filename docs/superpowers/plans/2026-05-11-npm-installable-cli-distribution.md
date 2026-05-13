@@ -12,10 +12,10 @@ Use one root package and four platform packages:
 
 - Root package: `ai-agent-switch`
 - Platform packages:
-  - `@ai-agent-switch/linux-x64`
-  - `@ai-agent-switch/darwin-arm64`
-  - `@ai-agent-switch/darwin-x64`
-  - `@ai-agent-switch/windows-x64`
+  - `ai-agent-switch-linux-x64`
+  - `ai-agent-switch-darwin-arm64`
+  - `ai-agent-switch-darwin-x64`
+  - `ai-agent-switch-windows-x64`
 
 The root package keeps Node.js wrappers and npm metadata. Platform packages contain standalone executables. The root package depends on platform packages through `optionalDependencies`. GitHub Actions builds and publishes platform packages before publishing the root package.
 

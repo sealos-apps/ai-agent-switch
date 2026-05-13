@@ -10,12 +10,13 @@ import { proxyStatus, startProxy, startProxyDaemon, stopProxy } from "../proxy/s
 import { aiAgentSwitchJsonSchema } from "../config/json-schema";
 import { completionScript } from "./completion";
 import { getProviderPreset, listProviderPresets } from "../providers/presets";
+import { packageVersion } from "./version";
 
 const cli = cac("ai-agent-switch");
 const app = new AiAgentSwitchApp();
 
 cli.help();
-cli.version("0.1.0");
+cli.version(packageVersion());
 
 if (process.argv.slice(2).length === 0) {
   await runTui(app);
