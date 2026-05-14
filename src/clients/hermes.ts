@@ -3,7 +3,7 @@ import { BaseClientAdapter } from "./base";
 import type { ApplyClientConfigInput, ClientCurrentState, ClientId, PatchPlan, PatchFile } from "./types";
 import { envKeyForProvider, parseYamlObject, readTextIfExists, recordAt, stringifyYamlObject, writeEnvValue } from "./utils";
 import { writeAtomic } from "../fs/atomic";
-import { normalizeProviderType, type ProviderType } from "../config/schema";
+import { normalizeProviderType, resolveModelType, type ProviderType } from "../config/schema";
 
 export class HermesAdapter extends BaseClientAdapter {
   id: ClientId = "hermes";
@@ -29,12 +29,13 @@ export class HermesAdapter extends BaseClientAdapter {
     const model = recordAt(config, "model");
     model.provider = input.provider.id;
     model.default = input.modelId;
+    const modelType = resolveModelType(input.provider, input.modelId);
     const providers = recordAt(config, "providers");
     providers[input.provider.id] = {
       name: input.provider.name,
-      base_url: hermesBaseUrl(input.provider.type, input.provider.baseUrl),
+      base_url: hermesBaseUrl(modelType, input.provider.baseUrl),
       key_env: input.provider.apiKeyEnv ?? (input.provider.apiKey?.kind === "env" ? input.provider.apiKey.name : envKeyForProvider(input.provider.id)),
-      transport: hermesTransport(input.provider.type),
+      transport: hermesTransport(modelType),
       default_model: input.provider.defaultModel ?? input.modelId,
       models: input.provider.models.map((model) => model.id),
     };

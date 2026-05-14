@@ -725,6 +725,7 @@ function models(): ModelTarget[] {
       providerId: "openrouter",
       providerName: "OpenRouter",
       providerType: "openai-compatible",
+      modelType: "openai-compatible",
       modelId: "qwen/qwen3-coder",
       ref: "openrouter/qwen/qwen3-coder",
       isProviderDefault: false,

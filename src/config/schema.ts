@@ -19,6 +19,15 @@ export const providerTypes = [
 
 export type ProviderType = (typeof providerTypes)[number];
 
+export const requestFormats = [
+  "openai-responses",
+  "openai-chat-completions",
+  "anthropic-messages",
+  "gemini-native",
+] as const;
+
+export type RequestFormat = (typeof requestFormats)[number];
+
 export const selectableProviderTypes = [
   "openai-responses",
   "openai-chat-compatible",
@@ -64,6 +73,7 @@ export type SecretRef =
 export type ModelProfile = {
   id: string;
   name?: string | undefined;
+  type?: ProviderType | undefined;
   contextWindow?: number | undefined;
   maxTokens?: number | undefined;
   capabilities?: string[] | undefined;
@@ -143,10 +153,16 @@ export const secretRefSchema: z.ZodType<SecretRef> = z.discriminatedUnion("kind"
 export const modelProfileSchema: z.ZodType<ModelProfile> = z.object({
   id: z.string().min(1),
   name: z.string().min(1).optional(),
+  type: z.enum(providerTypes).optional(),
   contextWindow: z.number().int().positive().optional(),
   maxTokens: z.number().int().positive().optional(),
   capabilities: z.array(z.string()).optional(),
 });
+
+export function resolveModelType(provider: ProviderProfile, modelId: string): ProviderType {
+  const model = provider.models.find((item) => item.id === modelId);
+  return model?.type ?? provider.type;
+}
 
 export const providerProfileSchema: z.ZodType<ProviderProfile> = z.object({
   id: z.string().min(1).regex(/^[a-zA-Z0-9._-]+$/, "provider id can only contain letters, numbers, dot, underscore, and dash"),

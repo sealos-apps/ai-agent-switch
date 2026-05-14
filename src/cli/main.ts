@@ -2,7 +2,7 @@
 import { cac } from "cac";
 import pc from "picocolors";
 import { AiAgentSwitchApp } from "../core/app";
-import { providerTypeLabels, selectableProviderTypes, type ProviderProfile } from "../config/schema";
+import { providerTypeLabels, selectableProviderTypes, type ProviderProfile, type ProviderType } from "../config/schema";
 import { parseClientId, printDoctor, printPatchPlan, printProviders, printStatus, printValidation } from "../shared/output";
 import { confirm } from "../shared/prompt";
 import { runTui } from "../tui/app";
@@ -337,6 +337,66 @@ cli
     }
   });
 
+cli
+  .command("agent-hub <action>", "Agent Hub commands: init")
+  .option("--client <client>", "Client id")
+  .option("--provider-id <id>", "Provider id")
+  .option("--provider-name <name>", "Provider display name")
+  .option("--model-type <type>", `Selected model type: ${selectableProviderTypes.join(", ")}`)
+  .option("--base-url <url>", "AI Proxy relay base URL")
+  .option("--api-key-env <name>", "API key environment variable name")
+  .option("--model <model>", "Selected model id")
+  .option("--available-model <model>", "Available model id, repeatable", { default: [] })
+  .option("--dry-run", "Print the change plan without writing client config")
+  .option("--json", "Output JSON")
+  .option("-y, --yes", "Skip interactive confirmation, but keep hard validation")
+  .action(async (action: string, options) => {
+    if (action !== "init") {
+      throw new Error(`Unsupported agent-hub action: ${action}`);
+    }
+    const modelType = stringOption(options.modelType, "model-type") as ProviderType;
+    const result = await app.initAgentHub({
+      clientId: parseClientId(stringOption(options.client, "client")),
+      providerId: stringOption(options.providerId, "provider-id"),
+      providerName: stringOption(options.providerName, "provider-name"),
+      baseUrl: stringOption(options.baseUrl, "base-url"),
+      apiKeyEnv: stringOption(options.apiKeyEnv, "api-key-env"),
+      modelId: stringOption(options.model, "model"),
+      modelType,
+      availableModels: normalizeAgentHubAvailableModels(options.availableModel, modelType),
+      yes: Boolean(options.yes) && !options.dryRun,
+    });
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    printPatchPlan(result.plan);
+    if (options.dryRun) {
+      console.log(pc.yellow("dry-run: client config was not written"));
+      return;
+    }
+    if (result.requiresConfirmation) {
+      if (!(await confirm("Apply these configuration changes?"))) {
+        console.log(pc.yellow("Canceled; client config was not written"));
+        return;
+      }
+      await app.initAgentHub({
+        clientId: result.clientId,
+        providerId: result.providerId,
+        providerName: stringOption(options.providerName, "provider-name"),
+        baseUrl: stringOption(options.baseUrl, "base-url"),
+        apiKeyEnv: stringOption(options.apiKeyEnv, "api-key-env"),
+        modelId: result.modelId,
+        modelType: result.modelType,
+        availableModels: normalizeAgentHubAvailableModels(options.availableModel, result.modelType),
+        yes: true,
+      });
+      console.log(pc.green("OK applied"));
+      return;
+    }
+    console.log(pc.green("OK applied"));
+  });
+
 cli.command("current", "Show current provider/model for all clients").action(async () => {
   const status = await app.status();
   for (const client of status.clients) {
@@ -510,6 +570,10 @@ function normalizeModels(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String).filter(Boolean);
   if (typeof value === "string" && value.trim()) return [value.trim()];
   return [];
+}
+
+function normalizeAgentHubAvailableModels(value: unknown, modelType: ProviderType): { id: string; type: ProviderType }[] {
+  return normalizeModels(value).map((id) => ({ id, type: modelType }));
 }
 
 function firstModelOption(value: unknown): string | undefined {
