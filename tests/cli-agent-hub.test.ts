@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { parse } from "jsonc-parser";
 
 const cliPath = join(import.meta.dir, "..", "src", "cli", "main.ts");
 
@@ -43,6 +44,51 @@ describe("agent-hub CLI", () => {
       const config = await readFile(join(home, ".hermes/config.yaml"), "utf8");
       expect(config).toContain("provider: aiproxy");
       expect(config).toContain("default: glm-4.6");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("init stores per-model request formats from available models", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-agent-hub-model-types-"));
+    try {
+      await run(
+        home,
+        "agent-hub",
+        "init",
+        "--client",
+        "hermes",
+        "--provider-id",
+        "aiproxy",
+        "--provider-name",
+        "AI Proxy",
+        "--model-type",
+        "openai-responses",
+        "--base-url",
+        "https://aiproxy.hzh.sealos.run/v1",
+        "--api-key-env",
+        "AIPROXY_API_KEY",
+        "--model",
+        "gpt-5.4",
+        "--available-model",
+        "gpt-5.4:openai-responses",
+        "--available-model",
+        "glm-4.6:openai-chat-compatible",
+        "-y",
+        "--json",
+      );
+
+      const store = parse(await readFile(join(home, ".ai-agent-switch/config.jsonc"), "utf8"));
+      expect(store.providers.aiproxy.type).toBe("openai-chat-compatible");
+      expect(store.providers.aiproxy.models).toEqual([
+        { id: "gpt-5.4", type: "openai-responses" },
+        { id: "glm-4.6", type: "openai-chat-compatible" },
+      ]);
+      const modelList = JSON.parse(await run(home, "model", "list", "--json")) as { modelId: string; modelType: string }[];
+      expect(modelList.map((model) => [model.modelId, model.modelType])).toEqual([
+        ["gpt-5.4", "openai-responses"],
+        ["glm-4.6", "openai-chat-compatible"],
+      ]);
     } finally {
       await rm(home, { recursive: true, force: true });
     }

@@ -74,9 +74,15 @@ export type InitAgentHubResult = {
   providerId: string;
   modelId: string;
   modelType: ProviderType;
+  providerType: ProviderType;
   configPath: string;
   applied: boolean;
   requiresConfirmation: boolean;
+  plan: PatchPlan;
+};
+
+export type ApplyAgentHubPlanInput = InitAgentHubInput & {
+  providerType: ProviderType;
   plan: PatchPlan;
 };
 
@@ -374,11 +380,15 @@ export class AiAgentSwitchApp {
   }
 
   async initAgentHub(input: InitAgentHubInput): Promise<InitAgentHubResult> {
+    const existingProvider = existsSync(this.store.configPath)
+      ? (await this.store.load()).providers[input.providerId]
+      : undefined;
+    const providerType = existingProvider?.type ?? "openai-chat-compatible";
     const models = normalizeAgentHubModels(input.modelId, input.availableModels);
     const provider = providerProfileSchema.parse({
       id: input.providerId,
       name: input.providerName,
-      type: input.modelType,
+      type: providerType,
       baseUrl: input.baseUrl,
       apiKeyEnv: input.apiKeyEnv,
       models,
@@ -400,6 +410,7 @@ export class AiAgentSwitchApp {
         providerId: provider.id,
         modelId: input.modelId,
         modelType: input.modelType,
+        providerType,
         configPath: adapter.configPath,
         applied: false,
         requiresConfirmation: true,
@@ -407,12 +418,41 @@ export class AiAgentSwitchApp {
       };
     }
 
+    return this.applyAgentHubPlan({
+      ...input,
+      providerType,
+      plan,
+    });
+  }
+
+  async applyAgentHubPlan(input: ApplyAgentHubPlanInput): Promise<InitAgentHubResult> {
+    const models = normalizeAgentHubModels(input.modelId, input.availableModels);
+    const provider = providerProfileSchema.parse({
+      id: input.providerId,
+      name: input.providerName,
+      type: input.providerType,
+      baseUrl: input.baseUrl,
+      apiKeyEnv: input.apiKeyEnv,
+      models,
+      defaultModel: input.modelId,
+    } satisfies ProviderProfile);
+
+    const adapter = this.adapters.get(input.clientId);
+    if (!adapter) throw new Error(`Client not supported: ${input.clientId}`);
+
     await this.store.update((config) => {
       config.providers[provider.id] = provider;
-      config.routes.default = { candidates: [{ providerId: provider.id, modelId: input.modelId }] };
+      const currentCandidates = config.routes.default?.candidates ?? [];
+      const nextCandidate = { providerId: provider.id, modelId: input.modelId };
+      config.routes.default = {
+        candidates: [
+          nextCandidate,
+          ...currentCandidates.filter((candidate) => candidate.providerId !== provider.id),
+        ],
+      };
       return config;
     });
-    await adapter.apply(plan);
+    await adapter.apply(input.plan);
     await this.stateStore.update((state) => {
       state.lastSwitch = {
         clientId: input.clientId,
@@ -427,10 +467,11 @@ export class AiAgentSwitchApp {
       providerId: provider.id,
       modelId: input.modelId,
       modelType: input.modelType,
+      providerType: input.providerType,
       configPath: adapter.configPath,
       applied: true,
       requiresConfirmation: false,
-      plan,
+      plan: input.plan,
     };
   }
 

@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { parse } from "jsonc-parser";
 import { AiAgentSwitchApp } from "../src/core/app";
 
 describe("Agent Hub init", () => {
@@ -37,6 +38,12 @@ describe("Agent Hub init", () => {
       expect(config).toContain("key_env: AIPROXY_API_KEY");
       expect(config).toContain("transport: codex_responses");
       expect(config).toContain("glm-4.6");
+      const store = parse(await readFile(join(home, ".ai-agent-switch/config.jsonc"), "utf8"));
+      expect(store.providers.aiproxy.type).toBe("openai-chat-compatible");
+      expect(store.providers.aiproxy.models).toEqual([
+        { id: "gpt-5.4", type: "openai-responses" },
+        { id: "glm-4.6", type: "openai-chat-compatible" },
+      ]);
       expect((await app.status()).state.lastSwitch).toMatchObject({
         clientId: "hermes",
         providerId: "aiproxy",
@@ -94,6 +101,40 @@ describe("Agent Hub init", () => {
         availableModels: [{ id: "claude-sonnet-4.5", type: "anthropic" }],
         yes: true,
       })).rejects.toThrow("must be included in --available-model");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("preserves unrelated default route candidates when Agent Hub refreshes one provider", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-agent-hub-route-"));
+    try {
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
+      await app.addProvider({
+        id: "backup",
+        name: "Backup Provider",
+        type: "openai-chat-compatible",
+        models: [{ id: "backup-model" }],
+      });
+      await app.setDefaultRoute("backup/backup-model");
+
+      await app.initAgentHub({
+        clientId: "hermes",
+        providerId: "aiproxy",
+        providerName: "AI Proxy",
+        baseUrl: "https://aiproxy.usw-1.sealos.io/v1",
+        apiKeyEnv: "AIPROXY_API_KEY",
+        modelId: "gpt-5.4",
+        modelType: "openai-responses",
+        availableModels: [{ id: "gpt-5.4", type: "openai-responses" }],
+        yes: true,
+      });
+
+      const config = await app.loadConfig();
+      expect(config.routes.default?.candidates).toEqual([
+        { providerId: "aiproxy", modelId: "gpt-5.4" },
+        { providerId: "backup", modelId: "backup-model" },
+      ]);
     } finally {
       await rm(home, { recursive: true, force: true });
     }

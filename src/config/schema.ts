@@ -19,15 +19,6 @@ export const providerTypes = [
 
 export type ProviderType = (typeof providerTypes)[number];
 
-export const requestFormats = [
-  "openai-responses",
-  "openai-chat-completions",
-  "anthropic-messages",
-  "gemini-native",
-] as const;
-
-export type RequestFormat = (typeof requestFormats)[number];
-
 export const selectableProviderTypes = [
   "openai-responses",
   "openai-chat-compatible",

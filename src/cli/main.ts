@@ -14,6 +14,7 @@ import { packageVersion } from "./version";
 
 const cli = cac("ai-agent-switch");
 const app = new AiAgentSwitchApp();
+type SelectableProviderType = (typeof selectableProviderTypes)[number];
 
 cli.help();
 cli.version(packageVersion());
@@ -354,7 +355,8 @@ cli
     if (action !== "init") {
       throw new Error(`Unsupported agent-hub action: ${action}`);
     }
-    const modelType = stringOption(options.modelType, "model-type") as ProviderType;
+    const modelType = parseProviderType(stringOption(options.modelType, "model-type"), "model-type");
+    const availableModels = normalizeAgentHubAvailableModels(options.availableModel, modelType);
     const result = await app.initAgentHub({
       clientId: parseClientId(stringOption(options.client, "client")),
       providerId: stringOption(options.providerId, "provider-id"),
@@ -363,7 +365,7 @@ cli
       apiKeyEnv: stringOption(options.apiKeyEnv, "api-key-env"),
       modelId: stringOption(options.model, "model"),
       modelType,
-      availableModels: normalizeAgentHubAvailableModels(options.availableModel, modelType),
+      availableModels,
       yes: Boolean(options.yes) && !options.dryRun,
     });
     if (options.json) {
@@ -380,7 +382,7 @@ cli
         console.log(pc.yellow("Canceled; client config was not written"));
         return;
       }
-      await app.initAgentHub({
+      await app.applyAgentHubPlan({
         clientId: result.clientId,
         providerId: result.providerId,
         providerName: stringOption(options.providerName, "provider-name"),
@@ -388,7 +390,9 @@ cli
         apiKeyEnv: stringOption(options.apiKeyEnv, "api-key-env"),
         modelId: result.modelId,
         modelType: result.modelType,
-        availableModels: normalizeAgentHubAvailableModels(options.availableModel, result.modelType),
+        providerType: result.providerType,
+        availableModels,
+        plan: result.plan,
         yes: true,
       });
       console.log(pc.green("OK applied"));
@@ -572,8 +576,22 @@ function normalizeModels(value: unknown): string[] {
   return [];
 }
 
-function normalizeAgentHubAvailableModels(value: unknown, modelType: ProviderType): { id: string; type: ProviderType }[] {
-  return normalizeModels(value).map((id) => ({ id, type: modelType }));
+function normalizeAgentHubAvailableModels(value: unknown, defaultModelType: ProviderType): { id: string; type: ProviderType }[] {
+  return normalizeModels(value).map((entry) => {
+    const separator = entry.lastIndexOf(":");
+    if (separator === -1) return { id: entry, type: defaultModelType };
+    const id = entry.slice(0, separator).trim();
+    const type = parseProviderType(entry.slice(separator + 1).trim(), "available-model type");
+    if (!id) throw new Error(`Invalid --available-model: ${entry}`);
+    return { id, type };
+  });
+}
+
+function parseProviderType(value: string, name: string): SelectableProviderType {
+  if (!selectableProviderTypes.includes(value as SelectableProviderType)) {
+    throw new Error(`Invalid --${name}: ${value}. Expected one of: ${selectableProviderTypes.join(", ")}`);
+  }
+  return value as SelectableProviderType;
 }
 
 function firstModelOption(value: unknown): string | undefined {

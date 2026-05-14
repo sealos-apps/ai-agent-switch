@@ -33,6 +33,7 @@ describe("CLI model list", () => {
         providerId: string;
         providerName: string;
         providerType: string;
+        modelType: string;
         modelId: string;
         ref: string;
         isProviderDefault: boolean;
@@ -44,6 +45,7 @@ describe("CLI model list", () => {
           providerId: "openrouter",
           providerName: "OpenRouter",
           providerType: "openai-compatible",
+          modelType: "openai-compatible",
           modelId: "qwen/qwen3-coder",
           ref: "openrouter/qwen/qwen3-coder",
           isProviderDefault: false,
@@ -53,6 +55,7 @@ describe("CLI model list", () => {
           providerId: "openrouter",
           providerName: "OpenRouter",
           providerType: "openai-compatible",
+          modelType: "openai-compatible",
           modelId: "anthropic/claude-sonnet-4.5",
           ref: "openrouter/anthropic/claude-sonnet-4.5",
           isProviderDefault: false,
