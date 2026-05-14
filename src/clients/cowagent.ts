@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { BaseClientAdapter } from "./base";
 import type { ApplyClientConfigInput, ClientCurrentState, ClientId, PatchPlan } from "./types";
 import { parseJsonObject, readTextIfExists, recordAt, stringifyJson } from "./utils";
-import { normalizeProviderType, type ProviderProfile, type ProviderType } from "../config/schema";
+import { normalizeProviderType, resolveModelType, type ProviderProfile, type ProviderType } from "../config/schema";
 
 type CowAgentProviderFields = {
   botType: string;
@@ -28,7 +28,7 @@ export class CowAgentAdapter extends BaseClientAdapter {
   }
 
   async planApply(input: ApplyClientConfigInput): Promise<PatchPlan> {
-    const fields = cowAgentProviderFields(input.provider.type);
+    const fields = cowAgentProviderFields(resolveModelType(input.provider, input.modelId));
     if (fields.apiBaseKey && !input.provider.baseUrl) {
       throw new Error(`CowAgent requires a baseUrl for provider ${input.provider.id}`);
     }

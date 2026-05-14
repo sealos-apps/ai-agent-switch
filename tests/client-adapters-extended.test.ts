@@ -81,6 +81,33 @@ describe("extended client adapters", () => {
     }
   });
 
+  test("openclaw adapter maps selected model type even when provider type differs", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-openclaw-model-type-"));
+    try {
+      await mkdir(join(home, ".openclaw"), { recursive: true });
+      const openclaw = createClientAdapters({ homeDir: home, cwd: home }).get("openclaw")!;
+      const aiproxyProvider: ProviderProfile = {
+        id: "aiproxy",
+        name: "AI Proxy",
+        type: "openai-chat-compatible",
+        baseUrl: "https://aiproxy.hzh.sealos.run/v1",
+        apiKeyEnv: "AIPROXY_API_KEY",
+        models: [
+          { id: "gpt-5.4", type: "openai-responses" },
+          { id: "glm-4.6", type: "openai-chat-compatible" },
+        ],
+      };
+
+      await openclaw.apply(await openclaw.planApply({ provider: aiproxyProvider, modelId: "gpt-5.4" }));
+
+      const parsed = JSON.parse(await readFile(join(home, ".openclaw/openclaw.json"), "utf8"));
+      expect(parsed.agents.defaults.model.primary).toBe("aiproxy/gpt-5.4");
+      expect(parsed.models.providers.aiproxy.api).toBe("openai-responses");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   test("crush adapter patches large model without touching sessions", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-crush-"));
     try {

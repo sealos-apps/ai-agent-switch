@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { BaseClientAdapter } from "./base";
 import type { ApplyClientConfigInput, ClientCurrentState, ClientId, PatchPlan } from "./types";
 import { parseJsoncObject, readTextIfExists, recordAt, stringifyJson } from "./utils";
-import { normalizeProviderType, type ModelProfile, type ProviderProfile, type ProviderType } from "../config/schema";
+import { normalizeProviderType, resolveModelType, type ModelProfile, type ProviderProfile, type ProviderType } from "../config/schema";
 
 type OpenClawProviderApi =
   | "openai-completions"
@@ -39,10 +39,11 @@ export class OpenClawAdapter extends BaseClientAdapter {
     model.primary = `${input.provider.id}/${input.modelId}`;
     const models = recordAt(config, "models");
     const providers = recordAt(models, "providers");
+    const modelType = resolveModelType(input.provider, input.modelId);
     providers[input.provider.id] = {
       baseUrl: input.provider.baseUrl,
       apiKey: openClawApiKey(input.provider),
-      api: openClawApi(input.provider.type),
+      api: openClawApi(modelType),
       models: input.provider.models.map(openClawModel),
     };
     const file = before === undefined

@@ -40,6 +40,7 @@ export function aiAgentSwitchJsonSchema(): Record<string, unknown> {
                 properties: {
                   id: { type: "string" },
                   name: { type: "string" },
+                  type: { enum: providerTypes },
                   contextWindow: { type: "number" },
                   maxTokens: { type: "number" },
                   capabilities: { type: "array", items: { type: "string" } },
