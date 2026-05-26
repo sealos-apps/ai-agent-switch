@@ -12,8 +12,8 @@ Usage:
   install.sh --version <vX.Y.Z> [--install-dir <dir>]
 
 Examples:
-  curl -fsSL https://raw.githubusercontent.com/sealos-apps/ai-agent-switch/main/install.sh | sh -s -- v0.1.3
-  curl -fsSL https://raw.githubusercontent.com/sealos-apps/ai-agent-switch/main/install.sh | sh -s -- --version v0.1.3 --install-dir /usr/local/bin
+  curl -fsSL https://raw.githubusercontent.com/sealos-apps/ai-agent-switch/main/install.sh | sh -s -- vX.Y.Z
+  curl -fsSL https://raw.githubusercontent.com/sealos-apps/ai-agent-switch/main/install.sh | sh -s -- --version vX.Y.Z --install-dir /usr/local/bin
 
 Environment:
   AI_AGENT_SWITCH_REPO  GitHub repo, default: sealos-apps/ai-agent-switch
@@ -86,4 +86,9 @@ tar -xzf "$archive_path" -C "$tmp_dir"
 install -m 0755 "${tmp_dir}/ai-agent-switch-${platform}/ai-agent-switch" "${INSTALL_DIR}/ai-agent-switch"
 install -m 0755 "${tmp_dir}/ai-agent-switch-${platform}/as" "${INSTALL_DIR}/as"
 
-ai-agent-switch --version >/dev/null
+expected_version="${VERSION#v}"
+installed_version="$("${INSTALL_DIR}/ai-agent-switch" --version | awk '{print $1}' | sed 's#^ai-agent-switch/##')"
+if [ "$installed_version" != "$expected_version" ]; then
+  echo "Installed ai-agent-switch version ${installed_version} does not match ${expected_version}" >&2
+  exit 1
+fi
