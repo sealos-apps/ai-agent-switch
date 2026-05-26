@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -79,6 +79,16 @@ jobs:
       - name: Build npm package
         run: bun run npm:build-package -- --platform ${{ matrix.platform }} --out-dir dist/npm-packages
 
+      - name: Pack release binary
+        shell: bash
+        run: |
+          cd dist/npm-packages
+          if [[ "${{ matrix.platform }}" == "windows-x64" ]]; then
+            7z a ../ai-agent-switch-${{ matrix.platform }}.zip ai-agent-switch-${{ matrix.platform }}/ai-agent-switch.exe ai-agent-switch-${{ matrix.platform }}/as.exe
+          else
+            tar -czf ../ai-agent-switch-${{ matrix.platform }}.tar.gz ai-agent-switch-${{ matrix.platform }}/ai-agent-switch ai-agent-switch-${{ matrix.platform }}/as
+          fi
+
       - name: Upload npm package
         uses: actions/upload-artifact@v4
         with:
@@ -86,8 +96,17 @@ jobs:
           path: dist/npm-packages/ai-agent-switch-${{ matrix.platform }}
           if-no-files-found: error
 
-  publish:
-    name: publish
+      - name: Upload release binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.platform }}
+          path: |
+            dist/ai-agent-switch-${{ matrix.platform }}.tar.gz
+            dist/ai-agent-switch-${{ matrix.platform }}.zip
+          if-no-files-found: ignore
+
+  publish-npm:
+    name: publish npm
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -134,3 +153,24 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public
+
+  publish-release:
+    name: publish release binaries
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: dist/release-assets
+
+      - name: Upload GitHub release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.event.inputs.tag_name || github.ref_name }}
+        run: |
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" dist/release-assets/binary-*/* --clobber
+          else
+            gh release create "$TAG_NAME" dist/release-assets/binary-*/* --title "$TAG_NAME" --generate-notes
+          fi

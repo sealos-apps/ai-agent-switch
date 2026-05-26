@@ -27,6 +27,12 @@ as
 
 npm 会根据当前平台自动安装对应的二进制包，不需要手动下载 release 资产。
 
+容器镜像或精简 Linux 环境可以直接安装 GitHub Releases 里的独立二进制：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sealos-apps/ai-agent-switch/main/install.sh | sh -s -- v0.1.3
+```
+
 ## 设计边界
 
 - 裸命令 `ai-agent-switch` 或别名 `as` 默认进入 TUI。

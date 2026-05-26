@@ -27,6 +27,12 @@ as
 
 npm installs the matching platform package automatically through optional dependencies. You do not need to download release assets manually.
 
+For container images or minimal Linux environments, install the standalone binary from GitHub Releases:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sealos-apps/ai-agent-switch/main/install.sh | sh -s -- v0.1.3
+```
+
 ## Scope
 
 - Bare `ai-agent-switch` or `as` opens the TUI by default.
