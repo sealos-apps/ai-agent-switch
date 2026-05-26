@@ -23,6 +23,10 @@ describe("release binary install contract", () => {
     expect(text).toContain("v*.*.*)");
     expect(text).toContain("mktemp -d 2>/dev/null || mktemp -d -t ai-agent-switch");
     expect(text).toContain("ai-agent-switch-linux-x64.tar.gz");
+    expect(text).toContain("mkdir -p \"$INSTALL_DIR\"");
+    expect(text).toContain("cp \"${tmp_dir}/ai-agent-switch-${platform}/ai-agent-switch\" \"${INSTALL_DIR}/ai-agent-switch\"");
+    expect(text).toContain("chmod 0755 \"${INSTALL_DIR}/ai-agent-switch\" \"${INSTALL_DIR}/as\"");
+    expect(text).not.toContain("install -m");
     expect(text).toContain("expected_version=\"${VERSION#v}\"");
     expect(text).toContain("\"${INSTALL_DIR}/ai-agent-switch\" --version");
   });

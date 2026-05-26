@@ -83,8 +83,10 @@ else
 fi
 
 tar -xzf "$archive_path" -C "$tmp_dir"
-install -m 0755 "${tmp_dir}/ai-agent-switch-${platform}/ai-agent-switch" "${INSTALL_DIR}/ai-agent-switch"
-install -m 0755 "${tmp_dir}/ai-agent-switch-${platform}/as" "${INSTALL_DIR}/as"
+mkdir -p "$INSTALL_DIR"
+cp "${tmp_dir}/ai-agent-switch-${platform}/ai-agent-switch" "${INSTALL_DIR}/ai-agent-switch"
+cp "${tmp_dir}/ai-agent-switch-${platform}/as" "${INSTALL_DIR}/as"
+chmod 0755 "${INSTALL_DIR}/ai-agent-switch" "${INSTALL_DIR}/as"
 
 expected_version="${VERSION#v}"
 installed_version="$("${INSTALL_DIR}/ai-agent-switch" --version | awk '{print $1}' | sed 's#^ai-agent-switch/##')"
