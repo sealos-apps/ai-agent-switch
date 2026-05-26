@@ -62,12 +62,15 @@ ai-agent-switch provider preset-add openrouter --api-key-env OPENROUTER_API_KEY
 ai-agent-switch provider preset-add ai-agent-switch-proxy
 ai-agent-switch provider show openrouter
 ai-agent-switch provider add --id openrouter --type openai-chat-compatible --base-url https://openrouter.ai/api/v1 --api-key-env OPENROUTER_API_KEY --model qwen/qwen3-coder --default-model qwen/qwen3-coder
+ai-agent-switch provider init --id aiproxy --name AIProxy --base-url https://aiproxy.usw-1.sealos.io/v1 --api-key-env AIPROXY_API_KEY --model gpt-5.4-mini:codex_responses --default-model gpt-5.4-mini
 ai-agent-switch provider model-add openrouter anthropic/claude-sonnet-4.5
 ai-agent-switch provider model-remove openrouter qwen/qwen3-coder
 ai-agent-switch provider default-model openrouter anthropic/claude-sonnet-4.5
 ai-agent-switch provider test openrouter
 ai-agent-switch model list
 ai-agent-switch model list --json
+ai-agent-switch switch --client openclaw --provider aiproxy -y
+ai-agent-switch switch --client hermes --provider aiproxy --model gpt-5.4-mini --dry-run --json
 ai-agent-switch route set-default openrouter/qwen/qwen3-coder
 ai-agent-switch route add-fallback openrouter/anthropic/claude-sonnet-4.5
 ai-agent-switch route list
@@ -132,6 +135,7 @@ ai-agent-switch client detect qwen --json
 ai-agent-switch client use-proxy qwen --dry-run --json
 ai-agent-switch provider list --json
 ai-agent-switch model list --json
+ai-agent-switch switch --client openclaw --provider aiproxy --dry-run --json
 ai-agent-switch route list --json
 ai-agent-switch proxy status --json
 ai-agent-switch use qwen openrouter/qwen/qwen3-coder --dry-run --json
@@ -192,6 +196,25 @@ Provider type 里 OpenAI 相关的两条线要分开：
 
 旧配置里的 `openai` 和 `openai-compatible` 仍然会被接受，分别按 `openai-responses` 和 `openai-chat-compatible` 处理。
 
+初始化统一 AIProxy provider：
+
+```bash
+ai-agent-switch provider init \
+  --id aiproxy \
+  --name AIProxy \
+  --base-url https://aiproxy.usw-1.sealos.io/v1 \
+  --api-key-env AIPROXY_API_KEY \
+  --model glm-5.1:chat_completions \
+  --model deepseek-v4-flash:chat_completions \
+  --model gpt-5.4-mini:codex_responses \
+  --model gpt-5.5:codex_responses \
+  --model claude-sonnet-4-6:anthropic_messages \
+  --model claude-opus-4-7:anthropic_messages \
+  --default-model gpt-5.4-mini
+```
+
+`provider init` 会把 AIProxy 保持为一个 provider，并记录每个模型自己的请求 API 模式。每个 `--model` 都必须写成 `modelId:apiMode`；目前支持 `chat_completions`、`codex_responses` 和 `anthropic_messages`。
+
 内置 preset 包括：
 
 - `openrouter`
@@ -233,6 +256,16 @@ ai-agent-switch model list --json
 ```
 
 ## 客户端配置
+
+不重启 client 进程，直接切换某个 client 使用的 provider/model：
+
+```bash
+ai-agent-switch switch --client openclaw --provider aiproxy -y
+ai-agent-switch switch --client hermes --provider aiproxy --model glm-5.1 -y
+ai-agent-switch switch --client openclaw --provider aiproxy --dry-run --json
+```
+
+省略 `--model` 时，`switch` 会使用 provider 的 `defaultModel`。如果 provider 没有默认模型，命令会失败，并要求显式传入 `--model`。
 
 查看 ai-agent-switch 支持配置的 client 列表，不读取各 client 当前配置：
 

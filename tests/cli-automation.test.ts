@@ -77,6 +77,7 @@ describe("CLI automation output", () => {
       expect(output).toContain("provider");
       expect(output).toContain("model");
       expect(output).toContain("route");
+      expect(output).toContain("\"switch:switch\"");
     } finally {
       await rm(home, { recursive: true, force: true });
     }

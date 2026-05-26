@@ -62,12 +62,15 @@ ai-agent-switch provider preset-add openrouter --api-key-env OPENROUTER_API_KEY
 ai-agent-switch provider preset-add ai-agent-switch-proxy
 ai-agent-switch provider show openrouter
 ai-agent-switch provider add --id openrouter --type openai-chat-compatible --base-url https://openrouter.ai/api/v1 --api-key-env OPENROUTER_API_KEY --model qwen/qwen3-coder --default-model qwen/qwen3-coder
+ai-agent-switch provider init --id aiproxy --name AIProxy --base-url https://aiproxy.usw-1.sealos.io/v1 --api-key-env AIPROXY_API_KEY --model gpt-5.4-mini:codex_responses --default-model gpt-5.4-mini
 ai-agent-switch provider model-add openrouter anthropic/claude-sonnet-4.5
 ai-agent-switch provider model-remove openrouter qwen/qwen3-coder
 ai-agent-switch provider default-model openrouter anthropic/claude-sonnet-4.5
 ai-agent-switch provider test openrouter
 ai-agent-switch model list
 ai-agent-switch model list --json
+ai-agent-switch switch --client openclaw --provider aiproxy -y
+ai-agent-switch switch --client hermes --provider aiproxy --model gpt-5.4-mini --dry-run --json
 ai-agent-switch route set-default openrouter/qwen/qwen3-coder
 ai-agent-switch route add-fallback openrouter/anthropic/claude-sonnet-4.5
 ai-agent-switch route list
@@ -132,6 +135,7 @@ ai-agent-switch client detect qwen --json
 ai-agent-switch client use-proxy qwen --dry-run --json
 ai-agent-switch provider list --json
 ai-agent-switch model list --json
+ai-agent-switch switch --client openclaw --provider aiproxy --dry-run --json
 ai-agent-switch route list --json
 ai-agent-switch proxy status --json
 ai-agent-switch use qwen openrouter/qwen/qwen3-coder --dry-run --json
@@ -192,6 +196,25 @@ OpenAI-related provider types are intentionally separate:
 
 Legacy `openai` and `openai-compatible` values are still accepted and normalized to `openai-responses` and `openai-chat-compatible`.
 
+Initialize a unified AIProxy provider:
+
+```bash
+ai-agent-switch provider init \
+  --id aiproxy \
+  --name AIProxy \
+  --base-url https://aiproxy.usw-1.sealos.io/v1 \
+  --api-key-env AIPROXY_API_KEY \
+  --model glm-5.1:chat_completions \
+  --model deepseek-v4-flash:chat_completions \
+  --model gpt-5.4-mini:codex_responses \
+  --model gpt-5.5:codex_responses \
+  --model claude-sonnet-4-6:anthropic_messages \
+  --model claude-opus-4-7:anthropic_messages \
+  --default-model gpt-5.4-mini
+```
+
+`provider init` keeps AIProxy as one provider and stores each model's request API mode. Every `--model` must use `modelId:apiMode`; accepted API modes are `chat_completions`, `codex_responses`, and `anthropic_messages`.
+
 Built-in presets:
 
 - `openrouter`
@@ -233,6 +256,16 @@ ai-agent-switch model list --json
 ```
 
 ## Client Configuration
+
+Switch one client to a provider/model without restarting the client process:
+
+```bash
+ai-agent-switch switch --client openclaw --provider aiproxy -y
+ai-agent-switch switch --client hermes --provider aiproxy --model glm-5.1 -y
+ai-agent-switch switch --client openclaw --provider aiproxy --dry-run --json
+```
+
+When `--model` is omitted, `switch` uses the provider `defaultModel`. If no default model is configured, the command fails and asks for an explicit `--model`.
 
 List supported clients without reading each current client config:
 

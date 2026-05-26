@@ -77,8 +77,8 @@ describe("Agent Hub init", () => {
       expect(parsed.agents.defaults.model.primary).toBe("aiproxy/glm-4.6");
       expect(parsed.models.providers.aiproxy.api).toBe("openai-completions");
       expect(parsed.models.providers.aiproxy.models).toEqual([
-        { id: "gpt-5.4", name: "gpt-5.4" },
-        { id: "glm-4.6", name: "glm-4.6" },
+        { id: "gpt-5.4", name: "gpt-5.4", api: "openai-responses" },
+        { id: "glm-4.6", name: "glm-4.6", api: "openai-completions" },
       ]);
     } finally {
       await rm(home, { recursive: true, force: true });
@@ -140,7 +140,7 @@ describe("Agent Hub init", () => {
     }
   });
 
-  test("rejects CowAgent Agent Hub init when AI Proxy key is not mapped to CowAgent runtime env", async () => {
+  test("rejects CowAgent Agent Hub init for Anthropic models", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-agent-hub-cowagent-"));
     try {
       const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
@@ -154,7 +154,7 @@ describe("Agent Hub init", () => {
         modelType: "anthropic",
         availableModels: [{ id: "claude-sonnet-4.6", type: "anthropic" }],
         yes: true,
-      })).rejects.toThrow("CLAUDE_API_KEY");
+      })).rejects.toThrow("CowAgent requires an OpenAI Chat-compatible provider");
       expect(existsSync(join(home, "CowAgent/config.json"))).toBe(false);
     } finally {
       await rm(home, { recursive: true, force: true });

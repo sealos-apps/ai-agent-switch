@@ -59,6 +59,60 @@ describe("AiAgentSwitchApp.useClient", () => {
     }
   });
 
+  test("switchClient uses provider default model when model is omitted", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-switch-default-"));
+    try {
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
+      await app.addProvider({
+        id: "aiproxy",
+        name: "AIProxy",
+        type: "openai-chat-compatible",
+        baseUrl: "https://aiproxy.usw-1.sealos.io/v1",
+        apiKeyEnv: "AIPROXY_API_KEY",
+        models: [
+          { id: "glm-5.1", type: "openai-chat-compatible" },
+          { id: "gpt-5.4-mini", type: "openai-responses" },
+        ],
+        defaultModel: "gpt-5.4-mini",
+      });
+
+      const result = await app.switchClient({
+        clientId: "openclaw",
+        providerId: "aiproxy",
+        yes: true,
+      });
+
+      expect(result.applied).toBe(true);
+      expect(result.requiresConfirmation).toBe(false);
+      const config = JSON.parse(await readFile(join(home, ".openclaw/openclaw.json"), "utf8"));
+      expect(config.agents.defaults.model.primary).toBe("aiproxy/gpt-5.4-mini");
+      expect(config.models.providers.aiproxy.api).toBe("openai-responses");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("switchClient requires a model when provider has no default model", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-switch-no-default-"));
+    try {
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
+      await app.addProvider({
+        id: "aiproxy",
+        name: "AIProxy",
+        type: "openai-chat-compatible",
+        models: [{ id: "glm-5.1" }],
+      });
+
+      await expect(app.switchClient({
+        clientId: "openclaw",
+        providerId: "aiproxy",
+        yes: true,
+      })).rejects.toThrow("Missing --model");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   test("can connect a client to the local ai-agent-switch proxy without selecting an upstream provider", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-use-proxy-"));
     try {

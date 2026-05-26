@@ -34,6 +34,138 @@ describe("CLI integration", () => {
     }
   });
 
+  test("provider init stores one AIProxy provider with per-model API modes", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-"));
+    try {
+      const output = await run(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--base-url",
+        "https://aiproxy.usw-1.sealos.io/v1",
+        "--api-key-env",
+        "AIPROXY_API_KEY",
+        "--model",
+        "glm-5.1:chat_completions",
+        "--model",
+        "gpt-5.4-mini:codex_responses",
+        "--model",
+        "claude-sonnet-4-6:anthropic_messages",
+        "--default-model",
+        "gpt-5.4-mini",
+        "--json",
+      );
+
+      const provider = JSON.parse(output);
+      expect(provider.id).toBe("aiproxy");
+      const config = JSON.parse(stripJsonc(await readFile(join(home, ".ai-agent-switch/config.jsonc"), "utf8")));
+      expect(config.providers.aiproxy).toMatchObject({
+        id: "aiproxy",
+        name: "AIProxy",
+        type: "openai-chat-compatible",
+        baseUrl: "https://aiproxy.usw-1.sealos.io/v1",
+        apiKeyEnv: "AIPROXY_API_KEY",
+        defaultModel: "gpt-5.4-mini",
+      });
+      expect(config.providers.aiproxy.models).toEqual([
+        { id: "glm-5.1", type: "openai-chat-compatible" },
+        { id: "gpt-5.4-mini", type: "openai-responses" },
+        { id: "claude-sonnet-4-6", type: "anthropic" },
+      ]);
+      expect(config.clients).toEqual({});
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("provider init rejects models without explicit API mode", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-api-mode-"));
+    try {
+      const result = await runExpectingFailure(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--model",
+        "glm-5.1",
+      );
+
+      expect(result.stderr).toContain("Expected modelId:apiMode");
+      expect(result.exitCode).toBe(1);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("provider init rejects duplicate model ids", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-duplicate-"));
+    try {
+      const result = await runExpectingFailure(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--model",
+        "glm-5.1:chat_completions",
+        "--model",
+        "glm-5.1:codex_responses",
+      );
+
+      expect(result.stderr).toContain("Duplicate model for provider aiproxy: glm-5.1");
+      expect(result.exitCode).toBe(1);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("provider init removes stale route candidates for the same provider", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-route-clean-"));
+    try {
+      await run(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--model",
+        "glm-5.1:chat_completions",
+        "--default-model",
+        "glm-5.1",
+      );
+      await run(home, "route", "set-default", "aiproxy/glm-5.1");
+      await run(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--model",
+        "gpt-5.4-mini:codex_responses",
+        "--default-model",
+        "gpt-5.4-mini",
+      );
+
+      const route = JSON.parse(await run(home, "route", "list", "--json")) as { candidates: { providerId: string; modelId: string }[] };
+      expect(route.candidates).toEqual([]);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   test("route commands configure default proxy fallback chain", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-route-"));
     try {
@@ -45,6 +177,75 @@ describe("CLI integration", () => {
 
       expect(output).toContain("primary openrouter/a");
       expect(output).toContain("fallback 1 openrouter/b");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("switch command applies provider default model to one client", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-switch-"));
+    try {
+      await run(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--base-url",
+        "https://aiproxy.usw-1.sealos.io/v1",
+        "--api-key-env",
+        "AIPROXY_API_KEY",
+        "--model",
+        "glm-5.1:chat_completions",
+        "--model",
+        "gpt-5.4-mini:codex_responses",
+        "--default-model",
+        "gpt-5.4-mini",
+      );
+
+      const output = await run(home, "switch", "--client", "openclaw", "--provider", "aiproxy", "-y", "--json");
+      const parsed = JSON.parse(output) as { applied: boolean; requiresConfirmation: boolean };
+      expect(parsed).toMatchObject({ applied: true, requiresConfirmation: false });
+
+      const config = JSON.parse(await readFile(join(home, ".openclaw/openclaw.json"), "utf8"));
+      expect(config.agents.defaults.model.primary).toBe("aiproxy/gpt-5.4-mini");
+      expect(config.models.providers.aiproxy.api).toBe("openai-responses");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("switch command can select an explicit model", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-switch-explicit-"));
+    try {
+      await run(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--base-url",
+        "https://aiproxy.usw-1.sealos.io/v1",
+        "--api-key-env",
+        "AIPROXY_API_KEY",
+        "--model",
+        "glm-5.1:chat_completions",
+        "--model",
+        "gpt-5.4-mini:codex_responses",
+        "--default-model",
+        "gpt-5.4-mini",
+      );
+
+      await run(home, "switch", "--client", "hermes", "--provider", "aiproxy", "--model", "glm-5.1", "-y");
+
+      const config = await readFile(join(home, ".hermes/config.yaml"), "utf8");
+      expect(config).toContain("provider: aiproxy");
+      expect(config).toContain("default: glm-5.1");
+      expect(config).toContain("transport: openai_chat");
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -80,6 +281,17 @@ async function run(home: string, ...args: string[]): Promise<string> {
   const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
   if (exitCode !== 0) throw new Error(`Command failed: ${args.join(" ")}\n${stderr}`);
   return stdout;
+}
+
+async function runExpectingFailure(home: string, ...args: string[]): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  const proc = Bun.spawn(["bun", cliPath, ...args], {
+    env: { ...process.env, HOME: home, AI_AGENT_SWITCH_HOME: join(home, ".ai-agent-switch"), NO_COLOR: "1" },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  if (exitCode === 0) throw new Error(`Command unexpectedly succeeded: ${args.join(" ")}\n${stdout}`);
+  return { exitCode, stdout, stderr };
 }
 
 function stripJsonc(text: string): string {

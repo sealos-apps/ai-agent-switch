@@ -49,7 +49,9 @@ describe("extended client adapters", () => {
       expect(parsed.agents.defaults.model.primary).toBe("openrouter/qwen/qwen3-coder");
       expect(parsed.models.providers.openrouter.api).toBe("openai-completions");
       expect(parsed.models.providers.openrouter.apiKey).toEqual({ source: "env", provider: "default", id: "OPENROUTER_API_KEY" });
-      expect(parsed.models.providers.openrouter.models).toEqual([{ id: "qwen/qwen3-coder", name: "qwen/qwen3-coder" }]);
+      expect(parsed.models.providers.openrouter.models).toEqual([
+        { id: "qwen/qwen3-coder", name: "qwen/qwen3-coder", api: "openai-completions" },
+      ]);
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -75,7 +77,9 @@ describe("extended client adapters", () => {
       expect(parsed.agents.defaults.model.primary).toBe("aiproxy-anthropic/deepseek-v4-pro");
       expect(parsed.models.providers["aiproxy-anthropic"].api).toBe("anthropic-messages");
       expect(parsed.models.providers["aiproxy-anthropic"].apiKey).toEqual({ source: "env", provider: "default", id: "AIPROXY_API_KEY" });
-      expect(parsed.models.providers["aiproxy-anthropic"].models).toEqual([{ id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" }]);
+      expect(parsed.models.providers["aiproxy-anthropic"].models).toEqual([
+        { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro", api: "anthropic-messages" },
+      ]);
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -103,6 +107,40 @@ describe("extended client adapters", () => {
       const parsed = JSON.parse(await readFile(join(home, ".openclaw/openclaw.json"), "utf8"));
       expect(parsed.agents.defaults.model.primary).toBe("aiproxy/gpt-5.4");
       expect(parsed.models.providers.aiproxy.api).toBe("openai-responses");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("openclaw adapter writes per-model api for one AIProxy provider", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-openclaw-aiproxy-api-"));
+    try {
+      await mkdir(join(home, ".openclaw"), { recursive: true });
+      const openclaw = createClientAdapters({ homeDir: home, cwd: home }).get("openclaw")!;
+      const aiproxyProvider: ProviderProfile = {
+        id: "aiproxy",
+        name: "AIProxy",
+        type: "openai-chat-compatible",
+        baseUrl: "https://aiproxy.usw-1.sealos.io/v1",
+        apiKeyEnv: "AIPROXY_API_KEY",
+        models: [
+          { id: "glm-5.1", type: "openai-chat-compatible" },
+          { id: "gpt-5.4-mini", type: "openai-responses" },
+          { id: "claude-sonnet-4-6", type: "anthropic" },
+        ],
+        defaultModel: "gpt-5.4-mini",
+      };
+
+      await openclaw.apply(await openclaw.planApply({ provider: aiproxyProvider, modelId: "gpt-5.4-mini" }));
+
+      const parsed = JSON.parse(await readFile(join(home, ".openclaw/openclaw.json"), "utf8"));
+      expect(parsed.agents.defaults.model.primary).toBe("aiproxy/gpt-5.4-mini");
+      expect(parsed.models.providers.aiproxy.api).toBe("openai-responses");
+      expect(parsed.models.providers.aiproxy.models).toEqual([
+        { id: "glm-5.1", name: "glm-5.1", api: "openai-completions" },
+        { id: "gpt-5.4-mini", name: "gpt-5.4-mini", api: "openai-responses" },
+        { id: "claude-sonnet-4-6", name: "claude-sonnet-4-6", api: "anthropic-messages" },
+      ]);
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -192,7 +230,7 @@ describe("extended client adapters", () => {
     }
   });
 
-  test("cowagent adapter maps Anthropic providers to claudeAPI", async () => {
+  test("cowagent adapter rejects Anthropic providers", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cowagent-anthropic-"));
     try {
       const cowagent = createClientAdapters({ homeDir: home, cwd: home }).get("cowagent")!;
@@ -205,14 +243,30 @@ describe("extended client adapters", () => {
         models: [{ id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" }],
       };
 
-      await cowagent.apply(await cowagent.planApply({ provider: anthropicProvider, modelId: "deepseek-v4-pro" }));
+      await expect(cowagent.planApply({ provider: anthropicProvider, modelId: "deepseek-v4-pro" })).rejects.toThrow(
+        "CowAgent requires an OpenAI Chat-compatible provider",
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 
-      const parsed = JSON.parse(await readFile(join(home, "CowAgent/config.json"), "utf8"));
-      expect(parsed.model).toBe("deepseek-v4-pro");
-      expect(parsed.bot_type).toBe("claudeAPI");
-      expect(parsed.claude_api_base).toBe("https://aiproxy.hzh.sealos.run/v1");
-      expect(parsed.claude_api_key).toBeUndefined();
-      expect(parsed.ai_agent_switch.provider).toBe("aiproxy-anthropic");
+  test("cowagent adapter rejects OpenAI Responses providers", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cowagent-responses-"));
+    try {
+      const cowagent = createClientAdapters({ homeDir: home, cwd: home }).get("cowagent")!;
+      const responsesProvider: ProviderProfile = {
+        id: "aiproxy-responses",
+        name: "Ai Proxy Responses",
+        type: "openai-responses",
+        baseUrl: "https://aiproxy.hzh.sealos.run/v1",
+        apiKeyEnv: "AIPROXY_API_KEY",
+        models: [{ id: "gpt-5.4-mini" }],
+      };
+
+      await expect(cowagent.planApply({ provider: responsesProvider, modelId: "gpt-5.4-mini" })).rejects.toThrow(
+        "CowAgent requires an OpenAI Chat-compatible provider",
+      );
     } finally {
       await rm(home, { recursive: true, force: true });
     }

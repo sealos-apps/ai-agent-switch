@@ -19,6 +19,14 @@ export const providerTypes = [
 
 export type ProviderType = (typeof providerTypes)[number];
 
+export const modelApiModes = [
+  "chat_completions",
+  "codex_responses",
+  "anthropic_messages",
+] as const;
+
+export type ModelApiMode = (typeof modelApiModes)[number];
+
 export const selectableProviderTypes = [
   "openai-responses",
   "openai-chat-compatible",
@@ -55,6 +63,17 @@ export function normalizeProviderType(type: ProviderType): ProviderType {
   if (type === "openai") return "openai-responses";
   if (type === "openai-compatible") return "openai-chat-compatible";
   return type;
+}
+
+export function providerTypeForModelApiMode(mode: ModelApiMode): ProviderType {
+  switch (mode) {
+    case "chat_completions":
+      return "openai-chat-compatible";
+    case "codex_responses":
+      return "openai-responses";
+    case "anthropic_messages":
+      return "anthropic";
+  }
 }
 
 export type SecretRef =

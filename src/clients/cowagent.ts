@@ -67,12 +67,7 @@ export class CowAgentAdapter extends BaseClientAdapter {
 function cowAgentProviderFields(type: ProviderType): CowAgentProviderFields {
   switch (normalizeProviderType(type)) {
     case "anthropic":
-      return {
-        botType: "claudeAPI",
-        apiBaseKey: "claude_api_base",
-        apiKeyKey: "claude_api_key",
-        expectedApiKeyEnv: "CLAUDE_API_KEY",
-      };
+      throw new Error("CowAgent requires an OpenAI Chat-compatible provider; Anthropic providers are not supported");
     case "gemini":
       return {
         botType: "gemini",

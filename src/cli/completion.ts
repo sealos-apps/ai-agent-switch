@@ -7,6 +7,7 @@ const commands = [
   "preset-list",
   "model",
   "route",
+  "switch",
   "use",
   "use-all",
   "current",
