@@ -31,6 +31,23 @@ export type UseClientProxyInput = {
   yes: boolean;
 };
 
+export type SwitchClientInput = {
+  clientId: ClientId;
+  providerId: string;
+  modelId?: string | undefined;
+  yes: boolean;
+};
+
+export type InitProviderInput = {
+  providerId: string;
+  providerName: string;
+  providerType?: ProviderType | undefined;
+  baseUrl?: string | undefined;
+  apiKeyEnv?: string | undefined;
+  models: ModelProfile[];
+  defaultModel?: string | undefined;
+};
+
 export type UseClientResult = {
   applied: boolean;
   requiresConfirmation: boolean;
@@ -159,6 +176,36 @@ export class AiAgentSwitchApp {
     const preset = getProviderPreset(id);
     if (!preset) throw new Error(`Provider preset not found: ${id}`);
     return this.addProvider(preset.toProvider(options));
+  }
+
+  async initProvider(input: InitProviderInput): Promise<ProviderProfile> {
+    const duplicateModel = firstDuplicate(input.models.map((model) => model.id));
+    if (duplicateModel) {
+      throw new Error(`Duplicate model for provider ${input.providerId}: ${duplicateModel}`);
+    }
+    const provider = providerProfileSchema.parse({
+      id: input.providerId,
+      name: input.providerName,
+      type: input.providerType ?? "openai-chat-compatible",
+      baseUrl: input.baseUrl,
+      apiKeyEnv: input.apiKeyEnv,
+      models: input.models,
+      defaultModel: input.defaultModel,
+    } satisfies ProviderProfile);
+    if (provider.defaultModel && !provider.models.some((model) => model.id === provider.defaultModel)) {
+      throw new Error(`Model not found for provider ${provider.id}: ${provider.defaultModel}`);
+    }
+    await this.store.update((config) => {
+      config.providers[provider.id] = provider;
+      const modelIds = new Set(provider.models.map((model) => model.id));
+      config.routes.default = {
+        candidates: (config.routes.default?.candidates ?? []).filter(
+          (candidate) => candidate.providerId !== provider.id || modelIds.has(candidate.modelId),
+        ),
+      };
+      return config;
+    });
+    return provider;
   }
 
   async removeProvider(id: string): Promise<boolean> {
@@ -354,6 +401,41 @@ export class AiAgentSwitchApp {
     const provider = registry.get(ref.providerId);
     if (!provider) throw new Error(`Provider not found: ${ref.providerId}`);
 
+    return this.applyClientSwitch({
+      clientId: input.clientId,
+      provider,
+      modelId: ref.modelId,
+      yes: input.yes,
+    });
+  }
+
+  async switchClient(input: SwitchClientInput): Promise<UseClientResult> {
+    const config = await this.store.load();
+    aiAgentSwitchConfigSchema.parse(config);
+    const provider = config.providers[input.providerId];
+    if (!provider) throw new Error(`Provider not found: ${input.providerId}`);
+    const modelId = input.modelId ?? provider.defaultModel;
+    if (!modelId) {
+      throw new Error(`Missing --model for provider ${provider.id}; configure --default-model or pass --model`);
+    }
+    if (!provider.models.some((model) => model.id === modelId)) {
+      throw new Error(`Model not found for provider ${provider.id}: ${modelId}`);
+    }
+
+    return this.applyClientSwitch({
+      clientId: input.clientId,
+      provider,
+      modelId,
+      yes: input.yes,
+    });
+  }
+
+  private async applyClientSwitch(input: {
+    clientId: ClientId;
+    provider: ProviderProfile;
+    modelId: string;
+    yes: boolean;
+  }): Promise<UseClientResult> {
     const adapter = this.adapters.get(input.clientId);
     if (!adapter) throw new Error(`Client not supported: ${input.clientId}`);
     const validation = await adapter.validate();
@@ -361,7 +443,7 @@ export class AiAgentSwitchApp {
       throw new Error(`Client config is invalid: ${validation.issues.join("; ")}`);
     }
 
-    const plan = await adapter.planApply({ provider, modelId: ref.modelId });
+    const plan = await adapter.planApply({ provider: input.provider, modelId: input.modelId });
     if (!input.yes) {
       return { applied: false, requiresConfirmation: true, plan };
     }
@@ -370,8 +452,8 @@ export class AiAgentSwitchApp {
     await this.stateStore.update((state) => {
       state.lastSwitch = {
         clientId: input.clientId,
-        providerId: ref.providerId,
-        modelId: ref.modelId,
+        providerId: input.provider.id,
+        modelId: input.modelId,
         at: new Date().toISOString(),
       };
       return state;
@@ -618,4 +700,13 @@ function normalizeAgentHubModels(modelId: string, availableModels: AgentHubAvail
     throw new Error(`Model ${modelId} must be included in --available-model`);
   }
   return models;
+}
+
+function firstDuplicate(values: string[]): string | undefined {
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) return value;
+    seen.add(value);
+  }
+  return undefined;
 }

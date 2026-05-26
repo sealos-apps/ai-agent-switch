@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { platformPackageConfig, renderPackageManifest, runtimePackagePlatform } from "../scripts/build-npm-package";
+import { providerTypeForModelApiMode } from "../src/config/schema";
 
 describe("npm package builder", () => {
   test("windows package uses exe suffix and public access", () => {
@@ -36,5 +37,9 @@ describe("npm package builder", () => {
   test("runtime platform detection maps supported hosts", () => {
     expect(runtimePackagePlatform({ platform: "darwin", arch: "arm64" })).toBe("darwin-arm64");
     expect(runtimePackagePlatform({ platform: "win32", arch: "x64" })).toBe("windows-x64");
+  });
+
+  test("provider type mapping rejects unexpected model API modes", () => {
+    expect(() => providerTypeForModelApiMode("responses" as never)).toThrow("Unsupported model API mode: responses");
   });
 });

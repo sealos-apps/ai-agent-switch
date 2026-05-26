@@ -44,7 +44,7 @@ export class OpenClawAdapter extends BaseClientAdapter {
       baseUrl: input.provider.baseUrl,
       apiKey: openClawApiKey(input.provider),
       api: openClawApi(modelType),
-      models: input.provider.models.map(openClawModel),
+      models: input.provider.models.map((model) => openClawModel(model, input.provider.type)),
     };
     const file = before === undefined
       ? { path: this.configPath, after: stringifyJson(config) }
@@ -100,10 +100,11 @@ function openClawApiKey(provider: ProviderProfile): string | { source: "env"; pr
   return undefined;
 }
 
-function openClawModel(model: ModelProfile): Record<string, unknown> {
+function openClawModel(model: ModelProfile, providerType: ProviderType): Record<string, unknown> {
   return {
     id: model.id,
     name: model.name ?? model.id,
+    api: openClawApi(model.type ?? providerType),
     contextWindow: model.contextWindow,
     maxTokens: model.maxTokens,
   };

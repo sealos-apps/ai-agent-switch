@@ -85,6 +85,10 @@ export function renderPackageManifest(config: NpmPlatformConfig) {
   };
 }
 
+export function releaseAssetName(config: NpmPlatformConfig): string {
+  return `${config.packageName}${config.platform === "windows-x64" ? ".zip" : ".tar.gz"}`;
+}
+
 function repoRoot() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 }

@@ -2,7 +2,15 @@
 import { cac } from "cac";
 import pc from "picocolors";
 import { AiAgentSwitchApp } from "../core/app";
-import { providerTypeLabels, selectableProviderTypes, type ProviderProfile, type ProviderType } from "../config/schema";
+import {
+  modelApiModes,
+  providerTypeForModelApiMode,
+  providerTypeLabels,
+  selectableProviderTypes,
+  type ModelApiMode,
+  type ProviderProfile,
+  type ProviderType,
+} from "../config/schema";
 import { parseClientId, printDoctor, printPatchPlan, printProviders, printStatus, printValidation } from "../shared/output";
 import { confirm } from "../shared/prompt";
 import { runTui } from "../tui/app";
@@ -143,14 +151,14 @@ cli.command("client <action> [client]", "Client commands: list / detect / show /
   });
 
 cli
-  .command("provider <action> [id] [value]", "Provider commands: list / show / add / edit / remove / test / model-add / model-remove")
+  .command("provider <action> [id] [value]", "Provider commands: list / show / init / preset-list / preset-show / preset-add / add / edit / remove / test / model-add / model-remove / default-model")
   .option("--id <id>", "provider id")
   .option("--name <name>", "Display name")
   .option("--type <type>", `Provider type: ${selectableProviderTypes.map((type) => `${type} (${providerTypeLabels[type]})`).join(", ")}`)
   .option("--base-url <url>", "OpenAI-compatible base URL")
   .option("--api-key-env <name>", "API key environment variable name")
   .option("--api-key <key>", "Inline API key, not recommended")
-  .option("--model <model>", "Model ID, repeatable", { default: [] })
+  .option("--model <model>", "Model ID, repeatable; provider init requires modelId:apiMode", { default: [] })
   .option("--default-model <model>", "Provider default model")
   .option("--json", "Output JSON")
   .option("-y, --yes", "Skip confirmation")
@@ -205,6 +213,26 @@ cli
       const provider = providerFromOptions(options);
       await app.addProvider(provider);
       console.log(`${pc.green("OK")} provider ${provider.id} saved`);
+      return;
+    }
+    if (action === "init") {
+      if (optionalString(options.apiKey)) {
+        throw new Error("provider init does not support --api-key; use --api-key-env");
+      }
+      const provider = await app.initProvider({
+        providerId: stringOption(options.id, "id"),
+        providerName: stringOption(options.name, "name"),
+        providerType: optionalString(options.type) ? parseProviderType(String(options.type), "type") : undefined,
+        baseUrl: optionalString(options.baseUrl),
+        apiKeyEnv: optionalString(options.apiKeyEnv),
+        models: parseProviderInitModels(options.model),
+        defaultModel: optionalString(options.defaultModel),
+      });
+      if (options.json) {
+        console.log(JSON.stringify(provider, null, 2));
+        return;
+      }
+      console.log(`${pc.green("OK")} provider ${provider.id} initialized`);
       return;
     }
     if (action === "model-add") {
@@ -275,6 +303,45 @@ cli.command("model <action>", "Model commands: list")
       return;
     }
     throw new Error(`Unsupported model action: ${action}`);
+  });
+
+cli
+  .command("switch", "Switch one client to a provider/model")
+  .option("--client <client>", "Client id")
+  .option("--provider <provider>", "Provider id")
+  .option("--model <model>", "Model id; defaults to provider defaultModel")
+  .option("--dry-run", "Print the change plan without writing client config")
+  .option("--json", "Output JSON")
+  .option("-y, --yes", "Skip interactive confirmation, but keep hard validation")
+  .action(async (options) => {
+    const clientId = parseClientId(stringOption(options.client, "client"));
+    const providerId = stringOption(options.provider, "provider");
+    const modelId = optionalString(options.model);
+    const result = await app.switchClient({
+      clientId,
+      providerId,
+      modelId,
+      yes: Boolean(options.yes) && !options.dryRun,
+    });
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    printPatchPlan(result.plan);
+    if (options.dryRun) {
+      console.log(pc.yellow("dry-run: client config was not written"));
+      return;
+    }
+    if (result.requiresConfirmation) {
+      if (!(await confirm("Apply these configuration changes?"))) {
+        console.log(pc.yellow("Canceled; client config was not written"));
+        return;
+      }
+      await app.switchClient({ clientId, providerId, modelId, yes: true });
+      console.log(pc.green("OK applied"));
+      return;
+    }
+    console.log(pc.green("OK applied"));
   });
 
 cli
@@ -587,11 +654,33 @@ function normalizeAgentHubAvailableModels(value: unknown, defaultModelType: Prov
   });
 }
 
+function parseProviderInitModels(value: unknown): { id: string; type: ProviderType }[] {
+  const models = normalizeModels(value);
+  if (models.length === 0) throw new Error("Missing --model");
+  return models.map((entry) => {
+    const separator = entry.lastIndexOf(":");
+    if (separator === -1) {
+      throw new Error(`Invalid --model: ${entry}. Expected modelId:apiMode`);
+    }
+    const id = entry.slice(0, separator).trim();
+    if (!id) throw new Error(`Invalid --model: ${entry}`);
+    const mode = parseModelApiMode(entry.slice(separator + 1).trim(), "apiMode in --model");
+    return { id, type: providerTypeForModelApiMode(mode) };
+  });
+}
+
 function parseProviderType(value: string, name: string): SelectableProviderType {
   if (!selectableProviderTypes.includes(value as SelectableProviderType)) {
     throw new Error(`Invalid --${name}: ${value}. Expected one of: ${selectableProviderTypes.join(", ")}`);
   }
   return value as SelectableProviderType;
+}
+
+function parseModelApiMode(value: string, name: string): ModelApiMode {
+  if (!modelApiModes.includes(value as ModelApiMode)) {
+    throw new Error(`Invalid ${name}: ${value}. Expected one of: ${modelApiModes.join(", ")}`);
+  }
+  return value as ModelApiMode;
 }
 
 function firstModelOption(value: unknown): string | undefined {
