@@ -104,6 +104,30 @@ describe("CLI integration", () => {
     }
   });
 
+  test("provider init rejects inline API keys", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-inline-key-"));
+    try {
+      const result = await runExpectingFailure(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--api-key",
+        "sk-test",
+        "--model",
+        "glm-5.1:chat_completions",
+      );
+
+      expect(result.stderr).toContain("provider init does not support --api-key; use --api-key-env");
+      expect(result.exitCode).toBe(1);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   test("provider init reports invalid model API mode as part of --model", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-invalid-api-mode-"));
     try {

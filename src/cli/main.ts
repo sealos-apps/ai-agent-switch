@@ -216,6 +216,9 @@ cli
       return;
     }
     if (action === "init") {
+      if (optionalString(options.apiKey)) {
+        throw new Error("provider init does not support --api-key; use --api-key-env");
+      }
       const provider = await app.initProvider({
         providerId: stringOption(options.id, "id"),
         providerName: stringOption(options.name, "name"),
