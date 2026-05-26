@@ -82,6 +82,16 @@ describe("CLI automation output", () => {
       await rm(home, { recursive: true, force: true });
     }
   });
+
+  test("provider help documents init model api mode format", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-provider-help-"));
+    try {
+      const output = await run(home, "provider", "--help");
+      expect(output).toContain("modelId:apiMode");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 });
 
 async function run(home: string, ...args: string[]): Promise<string> {

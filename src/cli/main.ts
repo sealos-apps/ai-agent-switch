@@ -158,7 +158,7 @@ cli
   .option("--base-url <url>", "OpenAI-compatible base URL")
   .option("--api-key-env <name>", "API key environment variable name")
   .option("--api-key <key>", "Inline API key, not recommended")
-  .option("--model <model>", "Model ID, repeatable", { default: [] })
+  .option("--model <model>", "Model ID, repeatable; provider init requires modelId:apiMode", { default: [] })
   .option("--default-model <model>", "Provider default model")
   .option("--json", "Output JSON")
   .option("-y, --yes", "Skip confirmation")
