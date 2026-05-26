@@ -661,7 +661,7 @@ function parseProviderInitModels(value: unknown): { id: string; type: ProviderTy
     }
     const id = entry.slice(0, separator).trim();
     if (!id) throw new Error(`Invalid --model: ${entry}`);
-    const mode = parseModelApiMode(entry.slice(separator + 1).trim(), "model apiMode");
+    const mode = parseModelApiMode(entry.slice(separator + 1).trim(), "apiMode in --model");
     return { id, type: providerTypeForModelApiMode(mode) };
   });
 }
@@ -675,7 +675,7 @@ function parseProviderType(value: string, name: string): SelectableProviderType 
 
 function parseModelApiMode(value: string, name: string): ModelApiMode {
   if (!modelApiModes.includes(value as ModelApiMode)) {
-    throw new Error(`Invalid --${name}: ${value}. Expected one of: ${modelApiModes.join(", ")}`);
+    throw new Error(`Invalid ${name}: ${value}. Expected one of: ${modelApiModes.join(", ")}`);
   }
   return value as ModelApiMode;
 }

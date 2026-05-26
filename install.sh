@@ -64,7 +64,7 @@ case "$os/$arch" in
     ;;
 esac
 
-tmp_dir="$(mktemp -d)"
+tmp_dir="$(mktemp -d 2>/dev/null || mktemp -d -t ai-agent-switch)"
 cleanup() {
   rm -rf "$tmp_dir"
 }

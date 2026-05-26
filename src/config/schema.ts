@@ -73,6 +73,8 @@ export function providerTypeForModelApiMode(mode: ModelApiMode): ProviderType {
       return "openai-responses";
     case "anthropic_messages":
       return "anthropic";
+    default:
+      throw new Error(`Unsupported model API mode: ${String(mode)}`);
   }
 }
 

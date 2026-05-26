@@ -104,6 +104,28 @@ describe("CLI integration", () => {
     }
   });
 
+  test("provider init reports invalid model API mode as part of --model", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-invalid-api-mode-"));
+    try {
+      const result = await runExpectingFailure(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--model",
+        "glm-5.1:responses",
+      );
+
+      expect(result.stderr).toContain("Invalid apiMode in --model: responses");
+      expect(result.exitCode).toBe(1);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   test("provider init rejects duplicate model ids", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-duplicate-"));
     try {
