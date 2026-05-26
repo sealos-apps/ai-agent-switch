@@ -86,8 +86,14 @@ describe("CLI automation output", () => {
   test("provider help documents init model api mode format", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-provider-help-"));
     try {
-      const output = await run(home, "provider", "--help");
-      expect(output).toContain("modelId:apiMode");
+      const rootHelp = await run(home, "--help");
+      expect(rootHelp).toContain("preset-list");
+      expect(rootHelp).toContain("preset-show");
+      expect(rootHelp).toContain("preset-add");
+      expect(rootHelp).toContain("default-model");
+
+      const providerHelp = await run(home, "provider", "--help");
+      expect(providerHelp).toContain("modelId:apiMode");
     } finally {
       await rm(home, { recursive: true, force: true });
     }

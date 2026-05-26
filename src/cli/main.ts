@@ -151,7 +151,7 @@ cli.command("client <action> [client]", "Client commands: list / detect / show /
   });
 
 cli
-  .command("provider <action> [id] [value]", "Provider commands: list / show / init / add / edit / remove / test / model-add / model-remove")
+  .command("provider <action> [id] [value]", "Provider commands: list / show / init / preset-list / preset-show / preset-add / add / edit / remove / test / model-add / model-remove / default-model")
   .option("--id <id>", "provider id")
   .option("--name <name>", "Display name")
   .option("--type <type>", `Provider type: ${selectableProviderTypes.map((type) => `${type} (${providerTypeLabels[type]})`).join(", ")}`)
