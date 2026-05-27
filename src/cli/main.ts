@@ -406,7 +406,7 @@ cli
   });
 
 cli
-  .command("agent-hub <action>", "Agent Hub commands: init / sync")
+  .command("agent-hub <action>", "Agent Hub commands: init")
   .option("--client <client>", "Client id")
   .option("--provider-id <id>", "Provider id")
   .option("--provider-name <name>", "Provider display name")
@@ -420,12 +420,13 @@ cli
   .option("--json", "Output JSON")
   .option("-y, --yes", "Skip interactive confirmation, but keep hard validation")
   .action(async (action: string, options) => {
-    if (action === "sync") {
-      if (!options.fromEnv) {
-        throw new Error("agent-hub sync requires --from-env");
+    if ((action === "init" || action === "sync") && options.fromEnv) {
+      if (action === "sync") {
+        console.warn(pc.yellow("agent-hub sync --from-env is deprecated; use agent-hub init --from-env"));
       }
-      const result = await app.syncAgentHubFromEnv({
-        clientId: parseClientId(stringOption(options.client, "client")),
+      const clientId = parseClientId(stringOption(options.client, "client"));
+      const result = await app.initAgentHubFromEnv({
+        clientId,
         env: process.env,
         yes: Boolean(options.yes) && !options.dryRun,
       });
@@ -443,8 +444,8 @@ cli
           console.log(pc.yellow("Canceled; client config was not written"));
           return;
         }
-        await app.syncAgentHubFromEnv({
-          clientId: result.clientId,
+        await app.initAgentHubFromEnv({
+          clientId,
           env: process.env,
           yes: true,
         });
@@ -453,6 +454,11 @@ cli
       }
       console.log(pc.green("OK applied"));
       return;
+    }
+    if (action === "sync") {
+      if (!options.fromEnv) {
+        throw new Error("agent-hub sync requires --from-env");
+      }
     }
     if (action !== "init") {
       throw new Error(`Unsupported agent-hub action: ${action}`);

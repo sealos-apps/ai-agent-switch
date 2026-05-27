@@ -129,8 +129,8 @@ describe("agent-hub CLI", () => {
     }
   });
 
-  test("sync reads Agent Hub env and applies client config", async () => {
-    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-agent-hub-sync-"));
+  test("init reads Agent Hub env and applies client config", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-agent-hub-init-env-"));
     try {
       const output = await run(
         home,
@@ -142,7 +142,7 @@ describe("agent-hub CLI", () => {
           AGENT_MODEL_API_MODE: "chat_completions",
         },
         "agent-hub",
-        "sync",
+        "init",
         "--client",
         "hermes",
         "--from-env",
@@ -162,11 +162,53 @@ describe("agent-hub CLI", () => {
       await rm(home, { recursive: true, force: true });
     }
   });
+
+  test("sync --from-env remains a deprecated alias for init", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-agent-hub-sync-alias-"));
+    try {
+      const { stdout, stderr } = await runWithStderr(
+        home,
+        {
+          AGENT_MODEL_PROVIDER: "custom:aiproxy-chat",
+          AGENT_MODEL_BASEURL: "https://aiproxy.example.test/v1",
+          AGENT_MODEL_APIKEY: "sk-test",
+          AGENT_MODEL: "glm-5.1",
+          AGENT_MODEL_API_MODE: "chat_completions",
+        },
+        "agent-hub",
+        "sync",
+        "--client",
+        "hermes",
+        "--from-env",
+        "-y",
+        "--json",
+      );
+      const parsed = JSON.parse(stdout) as { clientId: string; providerId: string; modelId: string; applied: boolean };
+      expect(parsed).toMatchObject({
+        clientId: "hermes",
+        providerId: "aiproxy-chat",
+        modelId: "glm-5.1",
+        applied: true,
+      });
+      expect(stderr).toContain("agent-hub sync --from-env is deprecated");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 });
 
 async function run(home: string, ...args: string[]): Promise<string>;
 async function run(home: string, env: Record<string, string>, ...args: string[]): Promise<string>;
 async function run(home: string, envOrArg: Record<string, string> | string, ...rest: string[]): Promise<string> {
+  if (typeof envOrArg === "string") {
+    return (await runWithStderr(home, envOrArg, ...rest)).stdout;
+  }
+  return (await runWithStderr(home, envOrArg, ...rest)).stdout;
+}
+
+async function runWithStderr(home: string, ...args: string[]): Promise<{ stdout: string; stderr: string }>;
+async function runWithStderr(home: string, env: Record<string, string>, ...args: string[]): Promise<{ stdout: string; stderr: string }>;
+async function runWithStderr(home: string, envOrArg: Record<string, string> | string, ...rest: string[]): Promise<{ stdout: string; stderr: string }> {
   const env = typeof envOrArg === "string" ? {} : envOrArg;
   const args = typeof envOrArg === "string" ? [envOrArg, ...rest] : rest;
   const proc = Bun.spawn(["bun", cliPath, ...args], {
@@ -176,5 +218,5 @@ async function run(home: string, envOrArg: Record<string, string> | string, ...r
   });
   const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
   if (exitCode !== 0) throw new Error(`Command failed: ${args.join(" ")}\n${stderr}`);
-  return stdout;
+  return { stdout, stderr };
 }

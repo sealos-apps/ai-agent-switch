@@ -87,7 +87,7 @@ export type InitAgentHubInput = {
   yes: boolean;
 };
 
-export type SyncAgentHubFromEnvInput = {
+export type InitAgentHubFromEnvInput = {
   clientId: ClientId;
   env: AgentHubEnvInput;
   yes: boolean;
@@ -514,7 +514,7 @@ export class AiAgentSwitchApp {
     });
   }
 
-  async syncAgentHubFromEnv(input: SyncAgentHubFromEnvInput): Promise<InitAgentHubResult> {
+  async initAgentHubFromEnv(input: InitAgentHubFromEnvInput): Promise<InitAgentHubResult> {
     const resolved = resolveAgentHubEnv(input.env);
     return this.initAgentHub({
       clientId: input.clientId,

@@ -221,12 +221,12 @@ ai-agent-switch provider init \
 
 `provider init` keeps AIProxy as one provider and stores each model's request API mode. Every `--model` must use `modelId:apiMode`; accepted API modes are `chat_completions`, `codex_responses`, and `anthropic_messages`.
 
-Agent Hub templates can keep provider/model mapping out of shell scripts by using env sync:
+Agent Hub templates can initialize native client config from runtime environment variables:
 
 ```bash
-ai-agent-switch agent-hub sync --client hermes --from-env -y --json
-ai-agent-switch agent-hub sync --client openclaw --from-env -y --json
-ai-agent-switch agent-hub sync --client cowagent --from-env -y --json
+ai-agent-switch agent-hub init --client hermes --from-env -y --json
+ai-agent-switch agent-hub init --client openclaw --from-env -y --json
+ai-agent-switch agent-hub init --client cowagent --from-env -y --json
 ```
 
 The command reads `AGENT_MODEL_PROVIDER`, `AGENT_MODEL_BASEURL`, `AGENT_MODEL_APIKEY`, `AGENT_MODEL`, and `AGENT_MODEL_API_MODE`, then writes the selected client's native config. CowAgent still uses its native `OPEN_AI_API_KEY` env at runtime, so Agent Hub templates should continue to inject that env for CowAgent.

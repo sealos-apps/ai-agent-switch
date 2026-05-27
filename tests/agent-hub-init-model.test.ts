@@ -185,11 +185,11 @@ describe("Agent Hub init", () => {
     }
   });
 
-  test("syncs Agent Hub model config from standard env", async () => {
+  test("initializes Agent Hub model config from standard env", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-agent-hub-env-"));
     try {
       const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
-      const result = await app.syncAgentHubFromEnv({
+      const result = await app.initAgentHubFromEnv({
         clientId: "hermes",
         env: {
           AGENT_MODEL_PROVIDER: "custom:aiproxy-chat",
@@ -216,11 +216,11 @@ describe("Agent Hub init", () => {
     }
   });
 
-  test("syncs CowAgent from Agent Hub env using its native key field", async () => {
+  test("initializes CowAgent from Agent Hub env using its native key field", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-agent-hub-cowagent-env-"));
     try {
       const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
-      const result = await app.syncAgentHubFromEnv({
+      const result = await app.initAgentHubFromEnv({
         clientId: "cowagent",
         env: {
           AGENT_MODEL_PROVIDER: "custom:aiproxy-chat",
