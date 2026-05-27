@@ -184,4 +184,69 @@ describe("Agent Hub init", () => {
       await rm(home, { recursive: true, force: true });
     }
   });
+
+  test("syncs Agent Hub model config from standard env", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-agent-hub-env-"));
+    try {
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
+      const result = await app.syncAgentHubFromEnv({
+        clientId: "hermes",
+        env: {
+          AGENT_MODEL_PROVIDER: "custom:aiproxy-chat",
+          AGENT_MODEL_BASEURL: "https://aiproxy.example.test/v1",
+          AGENT_MODEL_APIKEY: "sk-test",
+          AGENT_MODEL: "glm-5.1",
+          AGENT_MODEL_API_MODE: "chat_completions",
+        },
+        yes: true,
+      });
+
+      expect(result).toMatchObject({
+        applied: true,
+        clientId: "hermes",
+        providerId: "aiproxy-chat",
+        modelId: "glm-5.1",
+        modelType: "openai-chat-compatible",
+      });
+      const config = await readFile(join(home, ".hermes/config.yaml"), "utf8");
+      expect(config).toContain("provider: aiproxy-chat");
+      expect(config).toContain("key_env: AGENT_MODEL_APIKEY");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("syncs CowAgent from Agent Hub env using its native key field", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-agent-hub-cowagent-env-"));
+    try {
+      const app = new AiAgentSwitchApp({ homeDir: home, cwd: home });
+      const result = await app.syncAgentHubFromEnv({
+        clientId: "cowagent",
+        env: {
+          AGENT_MODEL_PROVIDER: "custom:aiproxy-chat",
+          AGENT_MODEL_BASEURL: "https://aiproxy.example.test/v1",
+          AGENT_MODEL_APIKEY: "sk-test",
+          AGENT_MODEL: "glm-5.1",
+          AGENT_MODEL_API_MODE: "chat_completions",
+        },
+        yes: true,
+      });
+
+      expect(result).toMatchObject({
+        applied: true,
+        clientId: "cowagent",
+        providerId: "aiproxy-chat",
+        modelId: "glm-5.1",
+      });
+      const config = JSON.parse(await readFile(join(home, "CowAgent/config.json"), "utf8"));
+      expect(config).toMatchObject({
+        model: "glm-5.1",
+        bot_type: "openai",
+        open_ai_api_base: "https://aiproxy.example.test/v1",
+      });
+      expect(config.open_ai_api_key).toBeUndefined();
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 });

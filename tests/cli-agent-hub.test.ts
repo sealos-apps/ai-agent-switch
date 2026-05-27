@@ -128,11 +128,49 @@ describe("agent-hub CLI", () => {
       await rm(home, { recursive: true, force: true });
     }
   });
+
+  test("sync reads Agent Hub env and applies client config", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-agent-hub-sync-"));
+    try {
+      const output = await run(
+        home,
+        {
+          AGENT_MODEL_PROVIDER: "custom:aiproxy-chat",
+          AGENT_MODEL_BASEURL: "https://aiproxy.example.test/v1",
+          AGENT_MODEL_APIKEY: "sk-test",
+          AGENT_MODEL: "glm-5.1",
+          AGENT_MODEL_API_MODE: "chat_completions",
+        },
+        "agent-hub",
+        "sync",
+        "--client",
+        "hermes",
+        "--from-env",
+        "-y",
+        "--json",
+      );
+      const parsed = JSON.parse(output) as { clientId: string; providerId: string; modelId: string; applied: boolean };
+      expect(parsed).toMatchObject({
+        clientId: "hermes",
+        providerId: "aiproxy-chat",
+        modelId: "glm-5.1",
+        applied: true,
+      });
+      const config = await readFile(join(home, ".hermes/config.yaml"), "utf8");
+      expect(config).toContain("provider: aiproxy-chat");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 });
 
-async function run(home: string, ...args: string[]): Promise<string> {
+async function run(home: string, ...args: string[]): Promise<string>;
+async function run(home: string, env: Record<string, string>, ...args: string[]): Promise<string>;
+async function run(home: string, envOrArg: Record<string, string> | string, ...rest: string[]): Promise<string> {
+  const env = typeof envOrArg === "string" ? {} : envOrArg;
+  const args = typeof envOrArg === "string" ? [envOrArg, ...rest] : rest;
   const proc = Bun.spawn(["bun", cliPath, ...args], {
-    env: { ...process.env, HOME: home, AI_AGENT_SWITCH_HOME: join(home, ".ai-agent-switch") },
+    env: { ...process.env, ...env, HOME: home, AI_AGENT_SWITCH_HOME: join(home, ".ai-agent-switch") },
     stdout: "pipe",
     stderr: "pipe",
   });
