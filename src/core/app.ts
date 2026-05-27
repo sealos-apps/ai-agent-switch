@@ -15,6 +15,7 @@ import { createClientAdapters, type ClientAdapter, type ClientCurrentState, type
 import { ProviderRegistry, maskProvider } from "../providers/registry";
 import { testProviderConnectivity } from "../providers/connectivity";
 import { getProviderPreset, type ProviderPresetAddOptions } from "../providers/presets";
+import { resolveAgentHubEnv, type AgentHubEnvInput } from "./agent-hub-env";
 
 export type AiAgentSwitchAppOptions = ConfigStoreOptions & {
   cwd?: string;
@@ -83,6 +84,12 @@ export type InitAgentHubInput = {
   modelId: string;
   modelType: ProviderType;
   availableModels: AgentHubAvailableModel[];
+  yes: boolean;
+};
+
+export type SyncAgentHubFromEnvInput = {
+  clientId: ClientId;
+  env: AgentHubEnvInput;
   yes: boolean;
 };
 
@@ -507,6 +514,21 @@ export class AiAgentSwitchApp {
     });
   }
 
+  async syncAgentHubFromEnv(input: SyncAgentHubFromEnvInput): Promise<InitAgentHubResult> {
+    const resolved = resolveAgentHubEnv(input.env);
+    return this.initAgentHub({
+      clientId: input.clientId,
+      providerId: resolved.providerId,
+      providerName: resolved.providerName,
+      baseUrl: resolved.baseUrl,
+      apiKeyEnv: agentHubApiKeyEnv(input.clientId, resolved.apiKeyEnv),
+      modelId: resolved.modelId,
+      modelType: resolved.modelType,
+      availableModels: resolved.availableModels,
+      yes: input.yes,
+    });
+  }
+
   async applyAgentHubPlan(input: ApplyAgentHubPlanInput): Promise<InitAgentHubResult> {
     const models = normalizeAgentHubModels(input.modelId, input.availableModels);
     const provider = providerProfileSchema.parse({
@@ -700,6 +722,11 @@ function normalizeAgentHubModels(modelId: string, availableModels: AgentHubAvail
     throw new Error(`Model ${modelId} must be included in --available-model`);
   }
   return models;
+}
+
+function agentHubApiKeyEnv(clientId: ClientId, defaultEnv: string): string {
+  if (clientId === "cowagent") return "OPEN_AI_API_KEY";
+  return defaultEnv;
 }
 
 function firstDuplicate(values: string[]): string | undefined {

@@ -406,7 +406,7 @@ cli
   });
 
 cli
-  .command("agent-hub <action>", "Agent Hub commands: init")
+  .command("agent-hub <action>", "Agent Hub commands: init / sync")
   .option("--client <client>", "Client id")
   .option("--provider-id <id>", "Provider id")
   .option("--provider-name <name>", "Provider display name")
@@ -415,10 +415,45 @@ cli
   .option("--api-key-env <name>", "API key environment variable name")
   .option("--model <model>", "Selected model id")
   .option("--available-model <model>", "Available model id, repeatable", { default: [] })
+  .option("--from-env", "Read Agent Hub model configuration from AGENT_MODEL_* environment variables")
   .option("--dry-run", "Print the change plan without writing client config")
   .option("--json", "Output JSON")
   .option("-y, --yes", "Skip interactive confirmation, but keep hard validation")
   .action(async (action: string, options) => {
+    if (action === "sync") {
+      if (!options.fromEnv) {
+        throw new Error("agent-hub sync requires --from-env");
+      }
+      const result = await app.syncAgentHubFromEnv({
+        clientId: parseClientId(stringOption(options.client, "client")),
+        env: process.env,
+        yes: Boolean(options.yes) && !options.dryRun,
+      });
+      if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      printPatchPlan(result.plan);
+      if (options.dryRun) {
+        console.log(pc.yellow("dry-run: client config was not written"));
+        return;
+      }
+      if (result.requiresConfirmation) {
+        if (!(await confirm("Apply these configuration changes?"))) {
+          console.log(pc.yellow("Canceled; client config was not written"));
+          return;
+        }
+        await app.syncAgentHubFromEnv({
+          clientId: result.clientId,
+          env: process.env,
+          yes: true,
+        });
+        console.log(pc.green("OK applied"));
+        return;
+      }
+      console.log(pc.green("OK applied"));
+      return;
+    }
     if (action !== "init") {
       throw new Error(`Unsupported agent-hub action: ${action}`);
     }
