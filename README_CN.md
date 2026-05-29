@@ -279,7 +279,7 @@ ai-agent-switch switch --client openclaw --provider aiproxy --dry-run --json
 ai-agent-switch client configure --client cowagent --slot main=aiproxy/glm-5.1 -y --json
 ```
 
-`client configure` 会以原子方式应用目标 client 请求的具名模型槽位配置。`main` 槽位是默认运行模型；其他槽位是 client-specific 的，只有在对应 client adapter 明确支持并消费时，才会影响运行时行为。
+`client configure` 会应用目标 client 请求的具名模型槽位配置。每个受影响文件会以原子写入方式更新，但跨多个文件的更新不是事务性提交。`main` 槽位是默认运行模型；其他槽位是 client-specific 的，只有在对应 client adapter 明确支持并消费时，才会影响运行时行为。
 
 查看 ai-agent-switch 支持配置的 client 列表，不读取各 client 当前配置：
 

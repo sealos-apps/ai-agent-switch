@@ -428,6 +428,10 @@ export class AiAgentSwitchApp {
 
     const adapter = this.adapters.get(input.clientId);
     if (!adapter) throw new Error(`Client not supported: ${input.clientId}`);
+    const main = slots.find((slot) => slot.slot === "main");
+    if (!main) {
+      throw new Error("Missing main slot");
+    }
     if (!adapter.planApplySlots && input.slots.length > 1) {
       throw new Error(`Client ${input.clientId} does not support multiple model slots`);
     }
@@ -450,10 +454,6 @@ export class AiAgentSwitchApp {
       return { applied: false, requiresConfirmation: true, plan };
     }
 
-    const main = slots.find((slot) => slot.slot === "main");
-    if (!main) {
-      throw new Error("Missing main slot");
-    }
     await adapter.apply(plan);
     await this.stateStore.update((state) => {
       state.lastSwitch = {

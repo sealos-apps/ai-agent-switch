@@ -86,6 +86,7 @@ cli.command("client <action> [client]", "Client commands: list / detect / show /
   .option("--slot <slot>", "Model slot, repeatable, format name=provider/model", { default: [] })
   .option("-y, --yes", "Skip interactive confirmation, but keep hard validation")
   .action(async (action: string, client: string | undefined, options) => {
+    const requestedClient = options.client ?? client;
     if (action === "list") {
       const clients = await app.listClients();
       if (options.json) {
@@ -98,13 +99,13 @@ cli.command("client <action> [client]", "Client commands: list / detect / show /
       return;
     }
     if (action === "detect") {
-      if (client) {
-        const detection = await app.detectClient(parseClientId(client));
+      if (requestedClient) {
+        const detection = await app.detectClient(parseClientId(requestedClient));
         if (options.json) {
           console.log(JSON.stringify(detection, null, 2));
           return;
         }
-        console.log(`${detection.configExists ? pc.green("OK") : pc.yellow("MISS")} ${client} ${pc.dim(detection.configPath)}`);
+        console.log(`${detection.configExists ? pc.green("OK") : pc.yellow("MISS")} ${requestedClient} ${pc.dim(detection.configPath)}`);
         return;
       }
       const clients = await app.listClients();
@@ -120,14 +121,14 @@ cli.command("client <action> [client]", "Client commands: list / detect / show /
       return;
     }
     if (action === "show") {
-      if (!client) throw new Error("Missing client");
-      const id = parseClientId(client);
+      if (!requestedClient) throw new Error("Missing client");
+      const id = parseClientId(requestedClient);
       console.log(JSON.stringify(await app.getClientCurrent(id), null, 2));
       return;
     }
     if (action === "use-proxy") {
-      if (!client) throw new Error("Missing client");
-      const clientId = parseClientId(client);
+      if (!requestedClient) throw new Error("Missing client");
+      const clientId = parseClientId(requestedClient);
       const result = await app.useClientProxy({ clientId, yes: Boolean(options.yes) && !options.dryRun });
       if (options.json) {
         console.log(JSON.stringify(result, null, 2));
@@ -151,7 +152,7 @@ cli.command("client <action> [client]", "Client commands: list / detect / show /
       return;
     }
     if (action === "configure") {
-      const clientId = parseClientId(stringOption(options.client ?? client, "client"));
+      const clientId = parseClientId(stringOption(requestedClient, "client"));
       const slots = parseClientSlots(options.slot);
       const result = await app.configureClient({ clientId, slots, yes: Boolean(options.yes) && !options.dryRun });
       if (options.json) {

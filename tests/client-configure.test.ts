@@ -100,6 +100,60 @@ describe("client configure CLI", () => {
     }
   });
 
+  test("requires main slot before planning multi-slot clients", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-client-configure-main-"));
+    try {
+      await run(
+        home,
+        "provider",
+        "add",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--type",
+        "openai-chat-compatible",
+        "--base-url",
+        "https://aiproxy.usw-1.sealos.io/v1",
+        "--model",
+        "glm-4.6v",
+      );
+
+      const result = await runExpectingFailure(
+        home,
+        "client",
+        "configure",
+        "cowagent",
+        "--slot",
+        "vision=aiproxy/glm-4.6v",
+        "--dry-run",
+        "--json",
+      );
+
+      expect(result.stderr).toContain("Missing main slot");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("accepts --client for client show and use-proxy", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-client-option-"));
+    try {
+      const showOutput = await run(home, "client", "show", "--client", "hermes", "--json");
+      const show = JSON.parse(showOutput) as { clientId: string };
+
+      expect(show.clientId).toBe("hermes");
+
+      const proxyOutput = await run(home, "client", "use-proxy", "--client", "hermes", "--dry-run", "--json");
+      const proxy = JSON.parse(proxyOutput) as { applied: boolean; plan: { clientId: string } };
+
+      expect(proxy.applied).toBe(false);
+      expect(proxy.plan.clientId).toBe("hermes");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   test("cowagent configure writes multiple slots atomically", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-client-configure-multi-"));
     try {

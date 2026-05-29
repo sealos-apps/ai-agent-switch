@@ -279,7 +279,7 @@ Configure one or more named model slots for a client:
 ai-agent-switch client configure --client cowagent --slot main=aiproxy/glm-5.1 -y --json
 ```
 
-`client configure` atomically applies the requested named model slot configuration for the target client. The `main` slot is the default runtime model. Additional slots are client-specific and only affect runtime behavior when the client's adapter explicitly supports and consumes them.
+`client configure` applies the requested named model slot configuration for the target client. Each affected file is written atomically, but updates spanning multiple files are not transactional. The `main` slot is the default runtime model. Additional slots are client-specific and only affect runtime behavior when the client's adapter explicitly supports and consumes them.
 
 List supported clients without reading each current client config:
 
