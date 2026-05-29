@@ -1,8 +1,7 @@
 import { join } from "node:path";
 import { BaseClientAdapter } from "./base";
-import type { ApplyClientConfigInput, ClientCurrentState, ClientId, PatchPlan, PatchFile } from "./types";
-import { envKeyForProvider, parseYamlObject, readTextIfExists, recordAt, stringifyYamlObject, writeEnvValue } from "./utils";
-import { writeAtomic } from "../fs/atomic";
+import type { ApplyClientConfigInput, ApplyClientSlotsInput, ClientCurrentState, ClientId, PatchPlan, PatchFile } from "./types";
+import { envKeyForProvider, parseYamlObject, readTextIfExists, recordAt, stringifyYamlObject } from "./utils";
 import { normalizeProviderType, resolveModelType, type ProviderType } from "../config/schema";
 
 export class HermesAdapter extends BaseClientAdapter {
@@ -57,17 +56,12 @@ export class HermesAdapter extends BaseClientAdapter {
     return { clientId: this.id, summary: `Switch Hermes Agent to ${input.provider.id}/${input.modelId}`, files };
   }
 
-  override async apply(plan: PatchPlan): Promise<void> {
-    for (const file of plan.files) {
-      if (file.path.endsWith(".env")) {
-        const match = file.after.match(/^([^=]+)=(.*)$/m);
-        if (match) {
-          await writeEnvValue(file.path, match[1]!, JSON.parse(match[2]!));
-          continue;
-        }
-      }
-      await writeAtomic(file.path, file.after);
+  async planApplySlots(input: ApplyClientSlotsInput): Promise<PatchPlan> {
+    if (input.slots.length !== 1 || input.slots[0]?.slot !== "main") {
+      throw new Error("Hermes Agent currently supports only main model slot");
     }
+    const slot = input.slots[0];
+    return this.planApply({ provider: slot.provider, modelId: slot.modelId });
   }
 
   async getCurrent(): Promise<ClientCurrentState> {

@@ -109,6 +109,32 @@ describe("client adapters", () => {
     }
   });
 
+  test("hermes adapter applies .env patch verbatim", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-hermes-env-"));
+    try {
+      await mkdir(join(home, ".hermes"), { recursive: true });
+      await writeFile(join(home, ".hermes/.env"), "PATH=/usr/bin\n");
+
+      const adapters = createClientAdapters({ homeDir: home, cwd: home });
+      const hermes = adapters.get("hermes")!;
+      const plan = await hermes.planApply({
+        provider: {
+          ...provider,
+          apiKeyEnv: "OPENROUTER_API_KEY",
+          apiKey: { kind: "inline", value: "sk-inline" },
+        },
+        modelId: "qwen/qwen3-coder",
+      });
+
+      await hermes.apply(plan);
+
+      const text = await readFile(join(home, ".hermes/.env"), "utf8");
+      expect(text).toBe('PATH=/usr/bin\nOPENROUTER_API_KEY="sk-inline"\n');
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   test("hermes adapter strips /v1 from anthropic base URL", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-hermes-anthropic-"));
     try {
