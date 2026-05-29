@@ -410,6 +410,9 @@ export class AiAgentSwitchApp {
     if (input.slots.some((slot) => !slot.slot || !slot.providerId || !slot.modelId)) {
       throw new Error("Invalid --slot; expected name=provider/model");
     }
+    for (const slot of input.slots) {
+      validateSlotName(slot.slot);
+    }
     const duplicateSlot = firstDuplicate(input.slots.map((slot) => slot.slot));
     if (duplicateSlot) {
       throw new Error(`Duplicate slot: ${duplicateSlot}`);
@@ -636,4 +639,10 @@ function firstDuplicate(values: string[]): string | undefined {
     seen.add(value);
   }
   return undefined;
+}
+
+function validateSlotName(value: string): void {
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(value) || ["__proto__", "prototype", "constructor"].includes(value)) {
+    throw new Error(`Invalid slot name: ${value}`);
+  }
 }

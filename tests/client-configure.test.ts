@@ -136,6 +136,44 @@ describe("client configure CLI", () => {
     }
   });
 
+  test("rejects unsafe slot names", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-client-configure-unsafe-"));
+    try {
+      await run(
+        home,
+        "provider",
+        "add",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--type",
+        "openai-chat-compatible",
+        "--base-url",
+        "https://aiproxy.usw-1.sealos.io/v1",
+        "--model",
+        "glm-5.1",
+      );
+
+      for (const slotName of ["__proto__", "main slot"]) {
+        const result = await runExpectingFailure(
+          home,
+          "client",
+          "configure",
+          "cowagent",
+          "--slot",
+          `${slotName}=aiproxy/glm-5.1`,
+          "--dry-run",
+          "--json",
+        );
+
+        expect(result.stderr).toContain(`Invalid slot name: ${slotName}`);
+      }
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   test("accepts --client for client show and use-proxy", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-client-option-"));
     try {
