@@ -272,6 +272,95 @@ describe("extended client adapters", () => {
     }
   });
 
+  test("cowagent adapter maps model slots to CowAgent capability config", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cowagent-slots-"));
+    try {
+      const cowagent = createClientAdapters({ homeDir: home, cwd: home }).get("cowagent")!;
+      const aiproxyProvider: ProviderProfile = {
+        id: "aiproxy",
+        name: "AI Proxy",
+        type: "openai-chat-compatible",
+        baseUrl: "https://aiproxy.usw-1.sealos.io/v1",
+        apiKeyEnv: "OPEN_AI_API_KEY",
+        models: [
+          { id: "gpt-5.5", type: "openai-chat-compatible" },
+          { id: "gemini-3.5-flash", type: "openai-chat-compatible" },
+          { id: "gemini-3.1-flash-image-preview", type: "openai-chat-compatible" },
+          { id: "gpt-4o-mini-transcribe", type: "openai-chat-compatible" },
+          { id: "qwen3-tts-flash", type: "openai-chat-compatible" },
+          { id: "text-embedding-v4", type: "openai-chat-compatible" },
+        ],
+      };
+
+      await cowagent.apply(await cowagent.planApplySlots!({
+        slots: [
+          { slot: "main", provider: aiproxyProvider, modelId: "gpt-5.5" },
+          { slot: "vision", provider: aiproxyProvider, modelId: "gemini-3.5-flash" },
+          { slot: "image", provider: aiproxyProvider, modelId: "gemini-3.1-flash-image-preview" },
+          { slot: "asr", provider: aiproxyProvider, modelId: "gpt-4o-mini-transcribe" },
+          { slot: "tts", provider: aiproxyProvider, modelId: "qwen3-tts-flash" },
+          { slot: "embedding", provider: aiproxyProvider, modelId: "text-embedding-v4" },
+        ],
+      }));
+
+      const parsed = JSON.parse(await readFile(join(home, "CowAgent/config.json"), "utf8"));
+      expect(parsed.model).toBe("gpt-5.5");
+      expect(parsed.bot_type).toBe("openai");
+      expect(parsed.tools.vision).toEqual({ provider: "openai", model: "gemini-3.5-flash" });
+      expect(parsed.skills["image-generation"]).toEqual({ provider: "openai", model: "gemini-3.1-flash-image-preview" });
+      expect(parsed.voice_to_text).toBe("openai");
+      expect(parsed.voice_to_text_model).toBe("gpt-4o-mini-transcribe");
+      expect(parsed.text_to_voice).toBe("openai");
+      expect(parsed.text_to_voice_model).toBe("qwen3-tts-flash");
+      expect(parsed.embedding_provider).toBe("openai");
+      expect(parsed.embedding_model).toBe("text-embedding-v4");
+      expect(parsed.gemini_api_base).toBeUndefined();
+      expect(parsed.dashscope_api_base).toBeUndefined();
+      expect(parsed.ai_agent_switch.slots).toEqual({
+        main: { provider: "aiproxy", model: "gpt-5.5" },
+        vision: { provider: "aiproxy", model: "gemini-3.5-flash" },
+        image: { provider: "aiproxy", model: "gemini-3.1-flash-image-preview" },
+        asr: { provider: "aiproxy", model: "gpt-4o-mini-transcribe" },
+        tts: { provider: "aiproxy", model: "qwen3-tts-flash" },
+        embedding: { provider: "aiproxy", model: "text-embedding-v4" },
+      });
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("cowagent adapter maps OpenAI TTS models to CowAgent audio config", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cowagent-openai-tts-"));
+    try {
+      const cowagent = createClientAdapters({ homeDir: home, cwd: home }).get("cowagent")!;
+      const aiproxyProvider: ProviderProfile = {
+        id: "aiproxy",
+        name: "AI Proxy",
+        type: "openai-chat-compatible",
+        baseUrl: "https://aiproxy.usw-1.sealos.io/v1",
+        models: [
+          { id: "gpt-5.4", type: "openai-chat-compatible" },
+          { id: "tts-1", type: "openai-chat-compatible" },
+        ],
+        apiKeyEnv: "OPEN_AI_API_KEY",
+      };
+
+      await cowagent.apply(await cowagent.planApplySlots!({
+        slots: [
+          { slot: "main", provider: aiproxyProvider, modelId: "gpt-5.4" },
+          { slot: "tts", provider: aiproxyProvider, modelId: "tts-1" },
+        ],
+      }));
+
+      const parsed = JSON.parse(await readFile(join(home, "CowAgent/config.json"), "utf8"));
+      expect(parsed.text_to_voice).toBe("openai");
+      expect(parsed.text_to_voice_model).toBe("tts-1");
+      expect(parsed.ai_agent_switch.slots.tts).toEqual({ provider: "aiproxy", model: "tts-1" });
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   const cowAgentProviderCases = [
     {
       type: "gemini",
@@ -299,7 +388,7 @@ describe("extended client adapters", () => {
     },
     {
       type: "dashscope",
-      modelId: "qwen3-max",
+      modelId: "qwen3.6-plus",
       botType: "dashscope",
       keyKey: "dashscope_api_key",
     },
