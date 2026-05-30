@@ -52,6 +52,8 @@ describe("CLI integration", () => {
         "--model",
         "glm-5.1:chat_completions",
         "--model",
+        "qwen-image-2.0-pro:openai_compatible",
+        "--model",
         "gpt-5.4-mini:codex_responses",
         "--model",
         "claude-sonnet-4-6:anthropic_messages",
@@ -73,6 +75,7 @@ describe("CLI integration", () => {
       });
       expect(config.providers.aiproxy.models).toEqual([
         { id: "glm-5.1", type: "openai-chat-compatible" },
+        { id: "qwen-image-2.0-pro", type: "openai-chat-compatible" },
         { id: "gpt-5.4-mini", type: "openai-responses" },
         { id: "claude-sonnet-4-6", type: "anthropic" },
       ]);

@@ -21,6 +21,7 @@ export type ProviderType = (typeof providerTypes)[number];
 
 export const modelApiModes = [
   "chat_completions",
+  "openai_compatible",
   "codex_responses",
   "anthropic_messages",
 ] as const;
@@ -68,6 +69,7 @@ export function normalizeProviderType(type: ProviderType): ProviderType {
 export function providerTypeForModelApiMode(mode: ModelApiMode): ProviderType {
   switch (mode) {
     case "chat_completions":
+    case "openai_compatible":
       return "openai-chat-compatible";
     case "codex_responses":
       return "openai-responses";

@@ -262,7 +262,15 @@ describe("client configure CLI", () => {
         "--model",
         "glm-5.1",
         "--model",
-        "glm-4.6v",
+        "qwen3.6-plus",
+        "--model",
+        "qwen-image-2.0-pro",
+        "--model",
+        "qwen3-asr-flash",
+        "--model",
+        "qwen3-tts-flash",
+        "--model",
+        "text-embedding-v4",
       );
 
       const output = await run(
@@ -273,7 +281,15 @@ describe("client configure CLI", () => {
         "--slot",
         "main=aiproxy/glm-5.1",
         "--slot",
-        "vision=aiproxy/glm-4.6v",
+        "vision=aiproxy/qwen3.6-plus",
+        "--slot",
+        "image=aiproxy/qwen-image-2.0-pro",
+        "--slot",
+        "asr=aiproxy/qwen3-asr-flash",
+        "--slot",
+        "tts=aiproxy/qwen3-tts-flash",
+        "--slot",
+        "embedding=aiproxy/text-embedding-v4",
         "--yes",
         "--json",
       );
@@ -290,8 +306,22 @@ describe("client configure CLI", () => {
       expect(parsed.plan.files).toHaveLength(1);
       expect(parsed.plan.files[0]?.path).toBe(configPath);
       expect(config.model).toBe("glm-5.1");
+      expect(config.bot_type).toBe("openai");
+      expect(config.open_ai_api_base).toBe("https://aiproxy.usw-1.sealos.io/v1");
+      expect(config.tools.vision).toEqual({ provider: "openai", model: "qwen3.6-plus" });
+      expect(config.skills["image-generation"]).toEqual({ provider: "openai", model: "qwen-image-2.0-pro" });
+      expect(config.voice_to_text).toBe("openai");
+      expect(config.voice_to_text_model).toBe("qwen3-asr-flash");
+      expect(config.text_to_voice).toBe("openai");
+      expect(config.text_to_voice_model).toBe("qwen3-tts-flash");
+      expect(config.embedding_provider).toBe("openai");
+      expect(config.embedding_model).toBe("text-embedding-v4");
       expect(config.ai_agent_switch.slots.main).toEqual({ provider: "aiproxy", model: "glm-5.1" });
-      expect(config.ai_agent_switch.slots.vision).toEqual({ provider: "aiproxy", model: "glm-4.6v" });
+      expect(config.ai_agent_switch.slots.vision).toEqual({ provider: "aiproxy", model: "qwen3.6-plus" });
+      expect(config.ai_agent_switch.slots.image).toEqual({ provider: "aiproxy", model: "qwen-image-2.0-pro" });
+      expect(config.ai_agent_switch.slots.asr).toEqual({ provider: "aiproxy", model: "qwen3-asr-flash" });
+      expect(config.ai_agent_switch.slots.tts).toEqual({ provider: "aiproxy", model: "qwen3-tts-flash" });
+      expect(config.ai_agent_switch.slots.embedding).toEqual({ provider: "aiproxy", model: "text-embedding-v4" });
     } finally {
       await rm(home, { recursive: true, force: true });
     }
