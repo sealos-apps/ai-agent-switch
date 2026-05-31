@@ -198,7 +198,7 @@ describe("client configure CLI", () => {
       await run(
         home,
         "provider",
-        "add",
+        "init",
         "--id",
         "aiproxy",
         "--name",
@@ -207,10 +207,14 @@ describe("client configure CLI", () => {
         "openai-chat-compatible",
         "--base-url",
         "https://aiproxy.usw-1.sealos.io/v1",
+        "--api-key-env",
+        "OPEN_AI_API_KEY",
         "--model",
+        "glm-5.1:chat_completions:llm",
+        "--model",
+        "glm-4.6v:chat_completions:llm",
+        "--default-model",
         "glm-5.1",
-        "--model",
-        "glm-4.6v",
       );
 
       const output = await run(
@@ -250,7 +254,7 @@ describe("client configure CLI", () => {
       await run(
         home,
         "provider",
-        "add",
+        "init",
         "--id",
         "aiproxy",
         "--name",
@@ -259,18 +263,22 @@ describe("client configure CLI", () => {
         "openai-chat-compatible",
         "--base-url",
         "https://aiproxy.usw-1.sealos.io/v1",
+        "--api-key-env",
+        "OPEN_AI_API_KEY",
         "--model",
+        "glm-5.1:chat_completions:llm",
+        "--model",
+        "qwen3.6-plus:chat_completions:llm",
+        "--model",
+        "qwen-image-2.0-pro:image_generation:image_generation",
+        "--model",
+        "qwen3-asr-flash:audio_transcriptions:asr",
+        "--model",
+        "qwen3-tts-flash:audio_speech:tts",
+        "--model",
+        "text-embedding-v4:embeddings:embedding",
+        "--default-model",
         "glm-5.1",
-        "--model",
-        "qwen3.6-plus",
-        "--model",
-        "qwen-image-2.0-pro",
-        "--model",
-        "qwen3-asr-flash",
-        "--model",
-        "qwen3-tts-flash",
-        "--model",
-        "text-embedding-v4",
       );
 
       const output = await run(
@@ -322,6 +330,153 @@ describe("client configure CLI", () => {
       expect(config.ai_agent_switch.slots.asr).toEqual({ provider: "aiproxy", model: "qwen3-asr-flash" });
       expect(config.ai_agent_switch.slots.tts).toEqual({ provider: "aiproxy", model: "qwen3-tts-flash" });
       expect(config.ai_agent_switch.slots.embedding).toEqual({ provider: "aiproxy", model: "text-embedding-v4" });
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("cowagent configure uses model kind metadata for non-LLM slots", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-client-configure-kind-"));
+    try {
+      await run(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--type",
+        "openai-chat-compatible",
+        "--base-url",
+        "https://aiproxy.usw-1.sealos.io/v1",
+        "--api-key-env",
+        "OPEN_AI_API_KEY",
+        "--model",
+        "glm-5.1:chat_completions:llm",
+        "--model",
+        "gpt-image-2:image_generation:image_generation",
+        "--model",
+        "qwen3-asr-flash:audio_transcriptions:asr",
+        "--model",
+        "qwen3-tts-flash:audio_speech:tts",
+        "--model",
+        "text-embedding-v4:embeddings:embedding",
+        "--default-model",
+        "glm-5.1",
+      );
+
+      await run(
+        home,
+        "client",
+        "configure",
+        "cowagent",
+        "--slot",
+        "main=aiproxy/glm-5.1",
+        "--slot",
+        "image=aiproxy/gpt-image-2",
+        "--slot",
+        "asr=aiproxy/qwen3-asr-flash",
+        "--slot",
+        "tts=aiproxy/qwen3-tts-flash",
+        "--slot",
+        "embedding=aiproxy/text-embedding-v4",
+        "--yes",
+        "--json",
+      );
+
+      const config = JSON.parse(await readFile(join(home, "CowAgent", "config.json"), "utf8"));
+      expect(config.skills["image-generation"]).toEqual({ provider: "openai", model: "gpt-image-2" });
+      expect(config.voice_to_text).toBe("openai");
+      expect(config.voice_to_text_model).toBe("qwen3-asr-flash");
+      expect(config.text_to_voice).toBe("openai");
+      expect(config.text_to_voice_model).toBe("qwen3-tts-flash");
+      expect(config.embedding_provider).toBe("openai");
+      expect(config.embedding_model).toBe("text-embedding-v4");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("cowagent configure rejects incompatible model kind for slot", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-client-configure-kind-invalid-"));
+    try {
+      await run(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--type",
+        "openai-chat-compatible",
+        "--base-url",
+        "https://aiproxy.usw-1.sealos.io/v1",
+        "--api-key-env",
+        "OPEN_AI_API_KEY",
+        "--model",
+        "glm-5.1:chat_completions:llm",
+        "--model",
+        "qwen3-tts-flash:audio_speech:tts",
+        "--default-model",
+        "glm-5.1",
+      );
+
+      const result = await runExpectingFailure(
+        home,
+        "client",
+        "configure",
+        "cowagent",
+        "--slot",
+        "main=aiproxy/glm-5.1",
+        "--slot",
+        "image=aiproxy/qwen3-tts-flash",
+        "--dry-run",
+        "--json",
+      );
+
+      expect(result.stderr).toContain("CowAgent slot image requires model kind image_generation");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("cowagent configure rejects non-main slot models without kind metadata", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-client-configure-kind-missing-"));
+    try {
+      await run(
+        home,
+        "provider",
+        "add",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--type",
+        "openai-chat-compatible",
+        "--base-url",
+        "https://aiproxy.usw-1.sealos.io/v1",
+        "--model",
+        "glm-5.1",
+        "--model",
+        "qwen-image-2.0-pro",
+      );
+
+      const result = await runExpectingFailure(
+        home,
+        "client",
+        "configure",
+        "cowagent",
+        "--slot",
+        "main=aiproxy/glm-5.1",
+        "--slot",
+        "image=aiproxy/qwen-image-2.0-pro",
+        "--dry-run",
+        "--json",
+      );
+
+      expect(result.stderr).toContain("CowAgent slot image requires explicit model kind image_generation");
     } finally {
       await rm(home, { recursive: true, force: true });
     }

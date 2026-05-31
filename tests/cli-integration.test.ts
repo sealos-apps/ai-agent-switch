@@ -34,6 +34,76 @@ describe("CLI integration", () => {
     }
   });
 
+  test("provider init stores model api mode and kind metadata", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-kind-"));
+    try {
+      const output = await run(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--base-url",
+        "https://aiproxy.usw-1.sealos.io/v1",
+        "--api-key-env",
+        "AIPROXY_API_KEY",
+        "--model",
+        "glm-5.1:chat_completions:llm",
+        "--model",
+        "qwen-image-2.0-pro:image_generation:image_generation",
+        "--model",
+        "veo-3.1-generate-preview:video_generation:video_generation",
+        "--default-model",
+        "glm-5.1",
+        "--json",
+      );
+
+      const provider = JSON.parse(output);
+      expect(provider.models).toEqual([
+        { id: "glm-5.1", type: "openai-chat-compatible", apiMode: "chat_completions", kind: "llm" },
+        { id: "qwen-image-2.0-pro", type: "openai-chat-compatible", apiMode: "image_generation", kind: "image_generation" },
+        { id: "veo-3.1-generate-preview", type: "openai-chat-compatible", apiMode: "video_generation", kind: "video_generation" },
+      ]);
+      const config = JSON.parse(stripJsonc(await readFile(join(home, ".ai-agent-switch/config.jsonc"), "utf8")));
+      expect(config.providers.aiproxy.models).toEqual(provider.models);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("provider init accepts model ids containing colons with explicit kind", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-colon-model-"));
+    try {
+      const output = await run(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--base-url",
+        "https://aiproxy.usw-1.sealos.io/v1",
+        "--api-key-env",
+        "AIPROXY_API_KEY",
+        "--model",
+        "vendor/model:release:image_generation:image_generation",
+        "--default-model",
+        "vendor/model:release",
+        "--json",
+      );
+
+      const provider = JSON.parse(output);
+      expect(provider.models).toEqual([
+        { id: "vendor/model:release", type: "openai-chat-compatible", apiMode: "image_generation", kind: "image_generation" },
+      ]);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   test("provider init stores one AIProxy provider with per-model API modes", async () => {
     const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-"));
     try {
@@ -74,10 +144,10 @@ describe("CLI integration", () => {
         defaultModel: "gpt-5.4-mini",
       });
       expect(config.providers.aiproxy.models).toEqual([
-        { id: "glm-5.1", type: "openai-chat-compatible" },
-        { id: "qwen-image-2.0-pro", type: "openai-chat-compatible" },
-        { id: "gpt-5.4-mini", type: "openai-responses" },
-        { id: "claude-sonnet-4-6", type: "anthropic" },
+        { id: "glm-5.1", type: "openai-chat-compatible", apiMode: "chat_completions" },
+        { id: "qwen-image-2.0-pro", type: "openai-chat-compatible", apiMode: "openai_compatible" },
+        { id: "gpt-5.4-mini", type: "openai-responses", apiMode: "codex_responses" },
+        { id: "claude-sonnet-4-6", type: "anthropic", apiMode: "anthropic_messages" },
       ]);
       expect(config.clients).toEqual({});
     } finally {
@@ -147,6 +217,52 @@ describe("CLI integration", () => {
       );
 
       expect(result.stderr).toContain("Invalid apiMode in --model: responses");
+      expect(result.exitCode).toBe(1);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("provider init rejects non-LLM models without explicit kind", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-kind-required-"));
+    try {
+      const result = await runExpectingFailure(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--model",
+        "glm-5.1:chat_completions",
+        "--model",
+        "qwen-image-2.0-pro:image_generation",
+      );
+
+      expect(result.stderr).toContain("Model qwen-image-2.0-pro with apiMode image_generation requires explicit kind image_generation");
+      expect(result.exitCode).toBe(1);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("provider init rejects api mode and kind mismatch", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ai-agent-switch-cli-provider-init-kind-mismatch-"));
+    try {
+      const result = await runExpectingFailure(
+        home,
+        "provider",
+        "init",
+        "--id",
+        "aiproxy",
+        "--name",
+        "AIProxy",
+        "--model",
+        "glm-5.1:chat_completions:image_generation",
+      );
+
+      expect(result.stderr).toContain("Model glm-5.1 with apiMode chat_completions does not support kind image_generation");
       expect(result.exitCode).toBe(1);
     } finally {
       await rm(home, { recursive: true, force: true });

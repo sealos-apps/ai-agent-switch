@@ -283,12 +283,12 @@ describe("extended client adapters", () => {
         baseUrl: "https://aiproxy.usw-1.sealos.io/v1",
         apiKeyEnv: "OPEN_AI_API_KEY",
         models: [
-          { id: "gpt-5.5", type: "openai-chat-compatible" },
-          { id: "gemini-3.5-flash", type: "openai-chat-compatible" },
-          { id: "gemini-3.1-flash-image-preview", type: "openai-chat-compatible" },
-          { id: "gpt-4o-mini-transcribe", type: "openai-chat-compatible" },
-          { id: "qwen3-tts-flash", type: "openai-chat-compatible" },
-          { id: "text-embedding-v4", type: "openai-chat-compatible" },
+          { id: "gpt-5.5", type: "openai-chat-compatible", kind: "llm" },
+          { id: "gemini-3.5-flash", type: "openai-chat-compatible", kind: "llm" },
+          { id: "gemini-3.1-flash-image-preview", type: "openai-chat-compatible", kind: "image_generation" },
+          { id: "gpt-4o-mini-transcribe", type: "openai-chat-compatible", kind: "asr" },
+          { id: "qwen3-tts-flash", type: "openai-chat-compatible", kind: "tts" },
+          { id: "text-embedding-v4", type: "openai-chat-compatible", kind: "embedding" },
         ],
       };
 
@@ -339,8 +339,8 @@ describe("extended client adapters", () => {
         type: "openai-chat-compatible",
         baseUrl: "https://aiproxy.usw-1.sealos.io/v1",
         models: [
-          { id: "gpt-5.4", type: "openai-chat-compatible" },
-          { id: "tts-1", type: "openai-chat-compatible" },
+          { id: "gpt-5.4", type: "openai-chat-compatible", kind: "llm" },
+          { id: "tts-1", type: "openai-chat-compatible", kind: "tts" },
         ],
         apiKeyEnv: "OPEN_AI_API_KEY",
       };
