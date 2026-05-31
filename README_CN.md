@@ -68,7 +68,7 @@ ai-agent-switch provider preset-add openrouter --api-key-env OPENROUTER_API_KEY
 ai-agent-switch provider preset-add ai-agent-switch-proxy
 ai-agent-switch provider show openrouter
 ai-agent-switch provider add --id openrouter --type openai-chat-compatible --base-url https://openrouter.ai/api/v1 --api-key-env OPENROUTER_API_KEY --model qwen/qwen3-coder --default-model qwen/qwen3-coder
-ai-agent-switch provider init --id aiproxy --name AIProxy --base-url https://aiproxy.usw-1.sealos.io/v1 --api-key-env AIPROXY_API_KEY --model gpt-5.4-mini:codex_responses --default-model gpt-5.4-mini
+ai-agent-switch provider init --id aiproxy --name AIProxy --base-url https://aiproxy.usw-1.sealos.io/v1 --api-key-env AIPROXY_API_KEY --model gpt-5.4-mini:codex_responses:llm --default-model gpt-5.4-mini
 ai-agent-switch provider model-add openrouter anthropic/claude-sonnet-4.5
 ai-agent-switch provider model-remove openrouter qwen/qwen3-coder
 ai-agent-switch provider default-model openrouter anthropic/claude-sonnet-4.5
@@ -210,16 +210,16 @@ ai-agent-switch provider init \
   --name AIProxy \
   --base-url https://aiproxy.usw-1.sealos.io/v1 \
   --api-key-env AIPROXY_API_KEY \
-  --model glm-5.1:chat_completions \
-  --model deepseek-v4-flash:chat_completions \
-  --model gpt-5.4-mini:codex_responses \
-  --model gpt-5.5:codex_responses \
-  --model claude-sonnet-4-6:anthropic_messages \
-  --model claude-opus-4-7:anthropic_messages \
+  --model glm-5.1:chat_completions:llm \
+  --model deepseek-v4-flash:chat_completions:llm \
+  --model gpt-5.4-mini:codex_responses:llm \
+  --model gpt-5.5:codex_responses:llm \
+  --model claude-sonnet-4-6:anthropic_messages:llm \
+  --model claude-opus-4-7:anthropic_messages:llm \
   --default-model gpt-5.4-mini
 ```
 
-`provider init` 会把 AIProxy 保持为一个 provider，并记录每个模型自己的请求 API 模式。每个 `--model` 都必须写成 `modelId:apiMode`；目前支持 `chat_completions`、`codex_responses` 和 `anthropic_messages`。
+`provider init` 会把 AIProxy 保持为一个 provider，并记录每个模型自己的请求 API 模式和用途。Agent Hub 场景下每个 `--model` 都必须写成 `modelId:apiMode:kind`。当前支持的 `apiMode` 包括 `chat_completions`、`openai_compatible`、`codex_responses`、`anthropic_messages`、`image_generation`、`video_generation`、`audio_transcriptions`、`audio_speech` 和 `embeddings`；当前支持的 `kind` 包括 `llm`、`vision`、`image_generation`、`video_generation`、`asr`、`tts` 和 `embedding`。
 
 内置 preset 包括：
 

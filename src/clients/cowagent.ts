@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { BaseClientAdapter } from "./base";
 import type { ApplyClientConfigInput, ApplyClientSlotsInput, ClientCurrentState, ClientId, PatchPlan } from "./types";
 import { parseJsonObject, readTextIfExists, recordAt, stringifyJson } from "./utils";
-import { normalizeProviderType, resolveModelType, type ProviderProfile, type ProviderType } from "../config/schema";
+import { normalizeProviderType, resolveModelProfile, resolveModelType, type ModelKind, type ProviderProfile, type ProviderType } from "../config/schema";
 
 type CowAgentProviderFields = {
   botType: string;
@@ -121,6 +121,7 @@ function applyCowAgentCapabilitySlot(
   modelId: string,
 ): void {
   if (slot === "main") return;
+  assertCowAgentSlotModelKind(slot, resolveModelProfile(provider, modelId)?.kind);
   const capability = cowAgentCapabilityConfig(provider, modelId);
 
   if (slot === "vision") {
@@ -163,6 +164,33 @@ function applyCowAgentCapabilitySlot(
     config.embedding_provider = capability.provider;
     config.embedding_model = capability.modelId;
     applyCowAgentCapabilityCredential(config, provider, capability.fields);
+  }
+}
+
+function assertCowAgentSlotModelKind(slot: string, kind: ModelKind | undefined): void {
+  const allowed = cowAgentSlotModelKinds(slot);
+  if (allowed.length === 0) return;
+  if (!kind) {
+    throw new Error(`CowAgent slot ${slot} requires explicit model kind ${allowed.join(" or ")}`);
+  }
+  if (allowed.includes(kind)) return;
+  throw new Error(`CowAgent slot ${slot} requires model kind ${allowed.join(" or ")}, got ${kind}`);
+}
+
+function cowAgentSlotModelKinds(slot: string): ModelKind[] {
+  switch (slot) {
+    case "vision":
+      return ["llm", "vision"];
+    case "image":
+      return ["image_generation"];
+    case "asr":
+      return ["asr"];
+    case "tts":
+      return ["tts"];
+    case "embedding":
+      return ["embedding"];
+    default:
+      return [];
   }
 }
 

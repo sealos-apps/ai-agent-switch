@@ -1,4 +1,4 @@
-import { providerTypes } from "./schema";
+import { modelApiModes, modelKinds, providerTypes } from "./schema";
 
 export function aiAgentSwitchJsonSchema(): Record<string, unknown> {
   return {
@@ -41,6 +41,8 @@ export function aiAgentSwitchJsonSchema(): Record<string, unknown> {
                   id: { type: "string" },
                   name: { type: "string" },
                   type: { enum: providerTypes },
+                  apiMode: { enum: modelApiModes },
+                  kind: { enum: modelKinds },
                   contextWindow: { type: "number" },
                   maxTokens: { type: "number" },
                   capabilities: { type: "array", items: { type: "string" } },

@@ -4,10 +4,13 @@ import pc from "picocolors";
 import { AiAgentSwitchApp } from "../core/app";
 import {
   modelApiModes,
+  modelKinds,
   providerTypeForModelApiMode,
   providerTypeLabels,
   selectableProviderTypes,
   type ModelApiMode,
+  type ModelKind,
+  type ModelProfile,
   type ProviderProfile,
   type ProviderType,
 } from "../config/schema";
@@ -187,7 +190,7 @@ cli
   .option("--base-url <url>", "OpenAI-compatible base URL")
   .option("--api-key-env <name>", "API key environment variable name")
   .option("--api-key <key>", "Inline API key, not recommended")
-  .option("--model <model>", "Model ID, repeatable; provider init requires modelId:apiMode", { default: [] })
+  .option("--model <model>", "Model ID, repeatable; provider init requires modelId:apiMode[:kind]", { default: [] })
   .option("--default-model <model>", "Provider default model")
   .option("--json", "Output JSON")
   .option("-y, --yes", "Skip confirmation")
@@ -609,18 +612,36 @@ function normalizeModels(value: unknown): string[] {
   return [];
 }
 
-function parseProviderInitModels(value: unknown): { id: string; type: ProviderType }[] {
+function parseProviderInitModels(value: unknown): ModelProfile[] {
   const models = normalizeModels(value);
   if (models.length === 0) throw new Error("Missing --model");
   return models.map((entry) => {
-    const separator = entry.lastIndexOf(":");
-    if (separator === -1) {
-      throw new Error(`Invalid --model: ${entry}. Expected modelId:apiMode`);
+    const parts = entry.split(":").map((part) => part.trim());
+    if (parts.length < 2) {
+      throw new Error(`Invalid --model: ${entry}. Expected modelId:apiMode[:kind]`);
     }
-    const id = entry.slice(0, separator).trim();
-    if (!id) throw new Error(`Invalid --model: ${entry}`);
-    const mode = parseModelApiMode(entry.slice(separator + 1).trim(), "apiMode in --model");
-    return { id, type: providerTypeForModelApiMode(mode) };
+    const last = parts[parts.length - 1]!;
+    const previous = parts.length >= 3 ? parts[parts.length - 2]! : "";
+    const hasExplicitKind = modelApiModes.includes(previous as ModelApiMode) && modelKinds.includes(last as ModelKind);
+    const rawMode = hasExplicitKind ? previous : last;
+    if (!hasExplicitKind && parts.length >= 3 && modelApiModes.includes(previous as ModelApiMode)) {
+      throw new Error(`Invalid kind in --model: ${last}. Expected one of: ${modelKinds.join(", ")}`);
+    }
+    const id = parts.slice(0, hasExplicitKind ? -2 : -1).join(":").trim();
+    if (!id || !rawMode) throw new Error(`Invalid --model: ${entry}`);
+    const apiMode = parseModelApiMode(rawMode, "apiMode in --model");
+    const model: ModelProfile = { id, type: providerTypeForModelApiMode(apiMode), apiMode };
+    if (hasExplicitKind) {
+      const kind = last as ModelKind;
+      const allowedKinds = modelApiModeKinds(apiMode);
+      if (!allowedKinds.includes(kind)) {
+        throw new Error(`Model ${id} with apiMode ${apiMode} does not support kind ${kind}`);
+      }
+      model.kind = kind;
+    } else if (modelApiModeRequiredKind(apiMode)) {
+      throw new Error(`Model ${id} with apiMode ${apiMode} requires explicit kind ${modelApiModeRequiredKind(apiMode)}`);
+    }
+    return model;
   });
 }
 
@@ -651,6 +672,43 @@ function parseModelApiMode(value: string, name: string): ModelApiMode {
     throw new Error(`Invalid ${name}: ${value}. Expected one of: ${modelApiModes.join(", ")}`);
   }
   return value as ModelApiMode;
+}
+
+function modelApiModeRequiredKind(mode: ModelApiMode): ModelKind | undefined {
+  switch (mode) {
+    case "image_generation":
+      return "image_generation";
+    case "video_generation":
+      return "video_generation";
+    case "audio_transcriptions":
+      return "asr";
+    case "audio_speech":
+      return "tts";
+    case "embeddings":
+      return "embedding";
+    default:
+      return undefined;
+  }
+}
+
+function modelApiModeKinds(mode: ModelApiMode): ModelKind[] {
+  switch (mode) {
+    case "chat_completions":
+    case "openai_compatible":
+    case "codex_responses":
+    case "anthropic_messages":
+      return ["llm", "vision"];
+    case "image_generation":
+      return ["image_generation"];
+    case "video_generation":
+      return ["video_generation"];
+    case "audio_transcriptions":
+      return ["asr"];
+    case "audio_speech":
+      return ["tts"];
+    case "embeddings":
+      return ["embedding"];
+  }
 }
 
 function firstModelOption(value: unknown): string | undefined {

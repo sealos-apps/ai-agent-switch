@@ -68,7 +68,7 @@ ai-agent-switch provider preset-add openrouter --api-key-env OPENROUTER_API_KEY
 ai-agent-switch provider preset-add ai-agent-switch-proxy
 ai-agent-switch provider show openrouter
 ai-agent-switch provider add --id openrouter --type openai-chat-compatible --base-url https://openrouter.ai/api/v1 --api-key-env OPENROUTER_API_KEY --model qwen/qwen3-coder --default-model qwen/qwen3-coder
-ai-agent-switch provider init --id aiproxy --name AIProxy --base-url https://aiproxy.usw-1.sealos.io/v1 --api-key-env AIPROXY_API_KEY --model gpt-5.4-mini:codex_responses --default-model gpt-5.4-mini
+ai-agent-switch provider init --id aiproxy --name AIProxy --base-url https://aiproxy.usw-1.sealos.io/v1 --api-key-env AIPROXY_API_KEY --model gpt-5.4-mini:codex_responses:llm --default-model gpt-5.4-mini
 ai-agent-switch provider model-add openrouter anthropic/claude-sonnet-4.5
 ai-agent-switch provider model-remove openrouter qwen/qwen3-coder
 ai-agent-switch provider default-model openrouter anthropic/claude-sonnet-4.5
@@ -210,16 +210,20 @@ ai-agent-switch provider init \
   --name AIProxy \
   --base-url https://aiproxy.usw-1.sealos.io/v1 \
   --api-key-env AIPROXY_API_KEY \
-  --model glm-5.1:chat_completions \
-  --model deepseek-v4-flash:chat_completions \
-  --model gpt-5.4-mini:codex_responses \
-  --model gpt-5.5:codex_responses \
-  --model claude-sonnet-4-6:anthropic_messages \
-  --model claude-opus-4-7:anthropic_messages \
+  --model glm-5.1:chat_completions:llm \
+  --model deepseek-v4-flash:chat_completions:llm \
+  --model gpt-5.4-mini:codex_responses:llm \
+  --model gpt-5.5:codex_responses:llm \
+  --model claude-sonnet-4-6:anthropic_messages:llm \
+  --model claude-opus-4-7:anthropic_messages:llm \
+  --model qwen-image-2.0-pro:image_generation:image_generation \
+  --model qwen3-asr-flash:audio_transcriptions:asr \
+  --model qwen3-tts-flash:audio_speech:tts \
+  --model text-embedding-v4:embeddings:embedding \
   --default-model gpt-5.4-mini
 ```
 
-`provider init` keeps AIProxy as one provider and stores each model's request API mode. Every `--model` must use `modelId:apiMode`; accepted API modes are `chat_completions`, `codex_responses`, and `anthropic_messages`.
+`provider init` keeps AIProxy as one provider and stores each model's request API mode. Every Agent Hub `provider init --model` entry uses `modelId:apiMode:kind` so model purpose is explicit; non-LLM API modes reject entries without `kind`. Accepted API modes are `chat_completions`, `openai_compatible`, `codex_responses`, `anthropic_messages`, `image_generation`, `video_generation`, `audio_transcriptions`, `audio_speech`, and `embeddings`. Accepted model kinds are `llm`, `vision`, `image_generation`, `video_generation`, `asr`, `tts`, and `embedding`.
 
 Built-in presets:
 

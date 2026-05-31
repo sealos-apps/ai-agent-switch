@@ -24,9 +24,26 @@ export const modelApiModes = [
   "openai_compatible",
   "codex_responses",
   "anthropic_messages",
+  "image_generation",
+  "video_generation",
+  "audio_transcriptions",
+  "audio_speech",
+  "embeddings",
 ] as const;
 
 export type ModelApiMode = (typeof modelApiModes)[number];
+
+export const modelKinds = [
+  "llm",
+  "vision",
+  "image_generation",
+  "video_generation",
+  "asr",
+  "tts",
+  "embedding",
+] as const;
+
+export type ModelKind = (typeof modelKinds)[number];
 
 export const selectableProviderTypes = [
   "openai-responses",
@@ -70,6 +87,11 @@ export function providerTypeForModelApiMode(mode: ModelApiMode): ProviderType {
   switch (mode) {
     case "chat_completions":
     case "openai_compatible":
+    case "image_generation":
+    case "video_generation":
+    case "audio_transcriptions":
+    case "audio_speech":
+    case "embeddings":
       return "openai-chat-compatible";
     case "codex_responses":
       return "openai-responses";
@@ -88,6 +110,8 @@ export type ModelProfile = {
   id: string;
   name?: string | undefined;
   type?: ProviderType | undefined;
+  apiMode?: ModelApiMode | undefined;
+  kind?: ModelKind | undefined;
   contextWindow?: number | undefined;
   maxTokens?: number | undefined;
   capabilities?: string[] | undefined;
@@ -168,13 +192,19 @@ export const modelProfileSchema: z.ZodType<ModelProfile> = z.object({
   id: z.string().min(1),
   name: z.string().min(1).optional(),
   type: z.enum(providerTypes).optional(),
+  apiMode: z.enum(modelApiModes).optional(),
+  kind: z.enum(modelKinds).optional(),
   contextWindow: z.number().int().positive().optional(),
   maxTokens: z.number().int().positive().optional(),
   capabilities: z.array(z.string()).optional(),
 });
 
+export function resolveModelProfile(provider: ProviderProfile, modelId: string): ModelProfile | undefined {
+  return provider.models.find((item) => item.id === modelId);
+}
+
 export function resolveModelType(provider: ProviderProfile, modelId: string): ProviderType {
-  const model = provider.models.find((item) => item.id === modelId);
+  const model = resolveModelProfile(provider, modelId);
   return model?.type ?? provider.type;
 }
 
